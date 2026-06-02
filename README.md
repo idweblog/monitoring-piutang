@@ -1,5 +1,7 @@
 # 📈 Sistem Pelacakan & Monitoring Piutang Rekanan (PWA-Enabled)
 
+**Versi Terkini:** `v1.5.0` (Rilis 2 Juni 2026 - Klik [CHANGELOG.md](./CHANGELOG.md) untuk melihat riwayat log perubahan lengkap).
+
 Sistem Pelacakan Piutang Rekanan adalah platform aplikasi web modern (Single Page Application) yang dibangun menggunakan **React**, **TypeScript**, **Vite**, dan **Tailwind CSS**. Aplikasi ini secara khusus didesain untuk membantu pelaku usaha/perusahaan memantau, mencatat, dan mengelola posisi saldo piutang berjalan dari para customer/rekanan secara cepat, aman, dan fleksibel.
 
 Dengan integrasi **PWA (Progressive Web App)** penuh, aplikasi ini dapat diinstal langsung ke layar utama (*Home Screen*) smartphone maupun komputer Anda tanpa melalui App Store atau Play Store—serta mendukung penggunaan secara **Offline** melalui optimalisasi *Service Worker caching*.

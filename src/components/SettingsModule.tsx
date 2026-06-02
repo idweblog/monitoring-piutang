@@ -58,6 +58,15 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'profile' | 'user-profile' | 'tax' | 'payment-methods' | 'partners' | 'tracking-positions' | 'users' | 'backup-restore' | 'notification' | 'system' | 'cash-accounts' | 'branding' | 'changelog'>('profile');
 
+  // Non-blocking custom modal confirmation state
+  const [showConfirmation, setShowConfirmation] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    confirmText?: string;
+    isDanger?: boolean;
+  } | null>(null);
+
   // Local form states
   const [namaPerusahaan, setNamaPerusahaan] = useState(settings.namaPerusahaan);
   const [alamat, setAlamat] = useState(settings.alamat);
@@ -220,6 +229,31 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
     setTimeout(() => setSaveSuccess(false), 3000);
   };
 
+  const syncPaymentMethodsFromAccounts = (accounts: CashAccount[]): string[] => {
+    const list: string[] = [];
+    let hasKas = false;
+    
+    accounts.forEach(acc => {
+      if (acc.tipe === 'Kas') {
+        hasKas = true;
+      } else {
+        const nameLower = acc.nama.toLowerCase();
+        if (nameLower.startsWith('transfer') || nameLower.startsWith('giro')) {
+          list.push(acc.nama);
+        } else {
+          const cleanName = acc.nama.replace(/^Bank\s+/i, '');
+          list.push(`Transfer ${cleanName}`);
+        }
+      }
+    });
+    
+    if (hasKas) {
+      list.push('Tunai');
+    }
+    
+    return Array.from(new Set(list));
+  };
+
   const handleAddAccount = () => {
     if (!newAccountNama.trim()) {
       alert('Nama akun/rekening harus diisi.');
@@ -235,21 +269,37 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
     setCashAccountsList(updated);
     setNewAccountNama('');
     setNewAccountNoRek('');
+    
+    const updatedMethods = syncPaymentMethodsFromAccounts(updated);
+    setMetodePembayaranList(updatedMethods);
+    
     onUpdateSettings({
       ...settings,
-      cashAccountsList: updated
+      cashAccountsList: updated,
+      metodePembayaranList: updatedMethods
     });
   };
 
   const handleDeleteAccount = (id: string) => {
-    if (confirm('Apakah Anda yakin ingin menghapus akun/rekening kas ini? Menghapus akun dari setelan tidak merusak data lama, namun akun tersebut tidak akan lagi dimuat untuk entri saldo baru.')) {
-      const updated = cashAccountsList.filter(acc => acc.id !== id);
-      setCashAccountsList(updated);
-      onUpdateSettings({
-        ...settings,
-        cashAccountsList: updated
-      });
-    }
+    setShowConfirmation({
+      title: 'Hapus Rekening Kas',
+      message: 'Apakah Anda yakin ingin menghapus akun/rekening kas ini? Menghapus akun dari setelan tidak merusak data lama, namun akun tersebut tidak akan lagi dimuat untuk entri saldo baru.',
+      isDanger: true,
+      confirmText: 'Ya, Hapus',
+      onConfirm: () => {
+        const updated = cashAccountsList.filter(acc => acc.id !== id);
+        setCashAccountsList(updated);
+        
+        const updatedMethods = syncPaymentMethodsFromAccounts(updated);
+        setMetodePembayaranList(updatedMethods);
+        
+        onUpdateSettings({
+          ...settings,
+          cashAccountsList: updated,
+          metodePembayaranList: updatedMethods
+        });
+      }
+    });
   };
 
   const handleStartEditAccount = (index: number) => {
@@ -274,9 +324,14 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
     };
     setCashAccountsList(updated);
     setEditingAccountIndex(null);
+    
+    const updatedMethods = syncPaymentMethodsFromAccounts(updated);
+    setMetodePembayaranList(updatedMethods);
+    
     onUpdateSettings({
       ...settings,
-      cashAccountsList: updated
+      cashAccountsList: updated,
+      metodePembayaranList: updatedMethods
     });
   };
 
@@ -332,14 +387,20 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
   };
 
   const handleDeleteRekanan = (index: number) => {
-    if (confirm('Apakah Anda yakin ingin menghapus nama rekanan ini?')) {
-      const updated = rekananList.filter((_, i) => i !== index);
-      setRekananList(updated);
-      onUpdateSettings({
-        ...settings,
-        rekananList: updated,
-      });
-    }
+    setShowConfirmation({
+      title: 'Hapus Rekanan',
+      message: 'Apakah Anda yakin ingin menghapus nama rekanan ini?',
+      isDanger: true,
+      confirmText: 'Ya, Hapus',
+      onConfirm: () => {
+        const updated = rekananList.filter((_, i) => i !== index);
+        setRekananList(updated);
+        onUpdateSettings({
+          ...settings,
+          rekananList: updated,
+        });
+      }
+    });
   };
 
   const handleSaveEditRekanan = (index: number) => {
@@ -370,14 +431,20 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
   };
 
   const handleDeletePosition = (index: number) => {
-    if (confirm('Apakah Anda yakin ingin menghapus opsi posisi pelacakan ini?')) {
-      const updated = trackingPositionsList.filter((_, i) => i !== index);
-      setTrackingPositionsList(updated);
-      onUpdateSettings({
-        ...settings,
-        standardPositionsList: updated,
-      });
-    }
+    setShowConfirmation({
+      title: 'Hapus Posisi Pelacakan',
+      message: 'Apakah Anda yakin ingin menghapus opsi posisi pelacakan ini?',
+      isDanger: true,
+      confirmText: 'Ya, Hapus',
+      onConfirm: () => {
+        const updated = trackingPositionsList.filter((_, i) => i !== index);
+        setTrackingPositionsList(updated);
+        onUpdateSettings({
+          ...settings,
+          standardPositionsList: updated,
+        });
+      }
+    });
   };
 
   const handleSaveEditPosition = (index: number) => {
@@ -442,10 +509,16 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
   };
 
   const handleDeleteUser = (userId: string) => {
-    if (confirm('Apakah Anda yakin ingin menghapus user ini?')) {
-      const remainingUsers = users.filter(u => u.id !== userId);
-      onUpdateUsers(remainingUsers);
-    }
+    setShowConfirmation({
+      title: 'Hapus Pengguna',
+      message: 'Apakah Anda yakin ingin menghapus user ini?',
+      isDanger: true,
+      confirmText: 'Ya, Hapus',
+      onConfirm: () => {
+        const remainingUsers = users.filter(u => u.id !== userId);
+        onUpdateUsers(remainingUsers);
+      }
+    });
   };
 
   const handleSaveEditUser = (userId: string) => {
@@ -1884,7 +1957,7 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
                   <p className="text-xs text-slate-400 mt-1">Dipergunakan untuk melakukan pengaturan dan pembersihan data operasional sistem.</p>
                 </div>
 
-                {/* Option 1: Empty All Transactions */}
+                 {/* Option 1: Empty All Transactions */}
                 <div className="p-4 bg-indigo-50/55 border border-indigo-100 rounded-xl space-y-3">
                   <h4 className="text-xs font-bold text-indigo-800">Kosongkan Seluruh Data Transaksi (Mulai dari Nol/Bersih)</h4>
                   <p className="text-slate-600 text-xs leading-relaxed">
@@ -1894,9 +1967,13 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      if (window.confirm('Apakah Anda yakin ingin menghapus seluruh data transaksi asli & demonstrasi? Tindakan ini tidak dapat dibatalkan.')) {
-                        onClearAllData();
-                      }
+                      setShowConfirmation({
+                        title: 'Kosongkan Seluruh Data Transaksi',
+                        message: 'Apakah Anda yakin ingin menghapus seluruh data transaksi asli & demonstrasi? Tindakan ini tidak dapat dibatalkan, semua pembayaran, invoice, dan rekap mutasi kas akan ikut terhapus.',
+                        isDanger: true,
+                        confirmText: 'Ya, Kosongkan Data',
+                        onConfirm: onClearAllData
+                      });
                     }}
                     className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-lg flex items-center gap-1.5 cursor-pointer shadow-sm transition-all"
                     id="btn-clear-all-transactions"
@@ -1916,9 +1993,13 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      if (window.confirm('Apakah Anda yakin ingin menghapus seluruh data kustom dan memuat ulang data default pabrik?')) {
-                        onResetData();
-                      }
+                      setShowConfirmation({
+                        title: 'Kembalikan Data Bawaan Pabrik',
+                        message: 'Apakah Anda yakin ingin menghapus seluruh data kustom dan memuat ulang data default pabrik? Anda akan otomatis login kembali sebagai Administrator.',
+                        isDanger: true,
+                        confirmText: 'Ya, Reset Kembali',
+                        onConfirm: onResetData
+                      });
                     }}
                     className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-4 py-2 rounded-lg flex items-center gap-1.5 cursor-pointer shadow-sm transition-all"
                     id="btn-reset-database"
@@ -1938,13 +2019,30 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
                 </div>
 
                 <div className="relative border-l-2 border-slate-100 pl-4 ml-2 space-y-6">
-                  {/* Version v1.4.0 */}
+                  {/* Version v1.5.0 */}
                   <div className="relative group">
                     <div className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-indigo-600 ring-4 ring-white" />
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-black text-slate-800">Versi v1.4.0 (Tinggi Keamanan)</span>
+                        <span className="text-xs font-black text-slate-800">Versi v1.5.0 (Sinkronisasi Kas & Rekening)</span>
                         <span className="text-[9px] bg-indigo-50 text-indigo-600 font-bold px-1.5 py-0.5 rounded">Rilis Terbaru</span>
+                      </div>
+                      <span className="text-[10px] text-slate-400 block mt-0.5">2 Juni 2026</span>
+                      <ul className="list-disc pl-4 text-xs text-slate-600 mt-2 space-y-1">
+                        <li><strong>Otomatisasi Metode Pembayaran dari Rekening Kas:</strong> Sinkronisasi real-time antar Rekening Perusahaan dan Pilihan Metode Pembayaran. Menambahkan/mengubah akun kas atau rekening bank akan otomatis menambahkan/memperbarui opsi metode pembayaran yang tersedia. Akun kas utama ter-link otomatis sebagai pilihan metode pembayaran "Tunai".</li>
+                        <li><strong>Pencatatan Saldo Pelunasan Otomatis:</strong> Integrasi langsung antara pelunasan tagihan (Invoice) dengan Modul Kas Perusahaan. Saat invoice ditandai lunas, sistem secara otomatis mencatat mutasi penambahan saldo rill ke rekening bank yang dipilih, lengkap dengan catatan riwayat otomatis.</li>
+                        <li><strong>Perbaikan Mode Reset & Kosongkan Database:</strong> Memperbaiki bug pada fungsi "Reset & Muat Contoh Data Bawaan" serta "Kosongkan Seluruh Data Transaksi" agar bekeja 100% andal, aman, dan bersih tanpa menyebabkan crash atau inkonsistensi data pengguna.</li>
+                        <li><strong>Peningkatan Kenyamanan Membaca (Font Sizing):</strong> Menyesuaikan ukuran font dasar global sistem menjadi 16px untuk mengurangi kelelahan mata saat mengawasi rincian angka piutang.</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  {/* Version v1.4.0 */}
+                  <div className="relative group">
+                    <div className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-slate-200 ring-4 ring-white" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-705">Versi v1.4.0 (Tinggi Keamanan)</span>
                       </div>
                       <span className="text-[10px] text-slate-400 block mt-0.5">31 Mei 2026</span>
                       <ul className="list-disc pl-4 text-xs text-slate-600 mt-2 space-y-1">
@@ -2035,6 +2133,53 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
         </div>
 
       </div>
+
+      {/* Non-blocking custom modal confirmation dialog */}
+      {showConfirmation && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn" id="custom-confirm-modal">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-xl border border-slate-100/80 flex flex-col gap-3 animate-scaleIn">
+            <div className="flex items-center gap-2.5">
+              <div className={`p-2 rounded-full ${showConfirmation.isDanger ? 'bg-rose-50 text-rose-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                {showConfirmation.isDanger ? <ShieldAlert className="h-5 w-5" /> : <Check className="h-5 w-5" />}
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 text-xs tracking-tight">
+                  {showConfirmation.title}
+                </h3>
+                <p className="text-[10px] text-slate-400">Konfirmasi Tindakan Sistem</p>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-slate-600 leading-normal">
+              {showConfirmation.message}
+            </p>
+
+            <div className="flex gap-2 justify-end mt-2">
+              <button
+                type="button"
+                onClick={() => setShowConfirmation(null)}
+                className="px-3.5 py-1.5 text-[11px] font-bold text-slate-500 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-all cursor-pointer"
+                id="btn-confirm-cancel"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  showConfirmation.onConfirm();
+                  setShowConfirmation(null);
+                }}
+                className={`px-3.5 py-1.5 text-[11px] font-bold text-white rounded-lg transition-all cursor-pointer shadow-xs ${
+                  showConfirmation.isDanger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-indigo-600 hover:bg-indigo-700'
+                }`}
+                id="btn-confirm-execute"
+              >
+                {showConfirmation.confirmText || 'Ya, Lanjutkan'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

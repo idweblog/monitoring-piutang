@@ -13,13 +13,16 @@ const firebaseConfigJson: any = configKeys.length > 0 ? (configFiles[configKeys[
 
 // Support environment variables (safe for GitHub/local development via .env)
 // with fallback to AI Studio's auto-generated firebase-applet-config.json
+const rawApiKey = (import.meta as any).env.VITE_FIREBASE_API_KEY || firebaseConfigJson.apiKey || '';
+const rawProjectId = (import.meta as any).env.VITE_FIREBASE_PROJECT_ID || firebaseConfigJson.projectId || '';
+
 const firebaseConfig = {
-  apiKey: (import.meta as any).env.VITE_FIREBASE_API_KEY || firebaseConfigJson.apiKey || '',
-  authDomain: (import.meta as any).env.VITE_FIREBASE_AUTH_DOMAIN || firebaseConfigJson.authDomain || '',
-  projectId: (import.meta as any).env.VITE_FIREBASE_PROJECT_ID || firebaseConfigJson.projectId || '',
-  storageBucket: (import.meta as any).env.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfigJson.storageBucket || '',
-  messagingSenderId: (import.meta as any).env.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfigJson.messagingSenderId || '',
-  appId: (import.meta as any).env.VITE_FIREBASE_APP_ID || firebaseConfigJson.appId || '',
+  apiKey: rawApiKey || 'AIzaSyPlaceholderKeyForUnconfiguredApplet',
+  authDomain: (import.meta as any).env.VITE_FIREBASE_AUTH_DOMAIN || firebaseConfigJson.authDomain || 'unconfigured-app.firebaseapp.com',
+  projectId: rawProjectId || 'unconfigured-firebase-project-id',
+  storageBucket: (import.meta as any).env.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfigJson.storageBucket || 'unconfigured-app.appspot.com',
+  messagingSenderId: (import.meta as any).env.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfigJson.messagingSenderId || '1234567890',
+  appId: (import.meta as any).env.VITE_FIREBASE_APP_ID || firebaseConfigJson.appId || '1:1234567890:web:abcdef123456',
   firestoreDatabaseId: (import.meta as any).env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || firebaseConfigJson.firestoreDatabaseId || '(default)'
 };
 

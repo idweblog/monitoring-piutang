@@ -27,12 +27,22 @@ interface CashModuleProps {
   userRole: string;
   currentUser: AppUser | null;
   settings: CompanySettings;
+  onPersistSetDoc: (col: string, id: string, data: any) => Promise<void>;
+  onPersistDeleteDoc: (col: string, id: string) => Promise<void>;
 }
 
-export function CashModule({ cashBalances, userRole, currentUser, settings }: CashModuleProps) {
+export function CashModule({ 
+  cashBalances, 
+  userRole, 
+  currentUser, 
+  settings, 
+  onPersistSetDoc, 
+  onPersistDeleteDoc 
+}: CashModuleProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [showConfirmDeleteId, setShowConfirmDeleteId] = useState<string | null>(null);
   
   // Dynamic Registered Accounts List
   const defaultAccounts: CashAccount[] = [
@@ -161,7 +171,7 @@ export function CashModule({ cashBalances, userRole, currentUser, settings }: Ca
     };
 
     try {
-      await setDoc(doc(db, 'cashBalances', docId), payload);
+      await onPersistSetDoc('cashBalances', docId, payload);
       setSavingSuccess(true);
       setTimeout(() => {
         setSavingSuccess(false);
@@ -201,14 +211,18 @@ export function CashModule({ cashBalances, userRole, currentUser, settings }: Ca
     setIsFormOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (!canInput) return;
-    if (window.confirm('Apakah Anda yakin ingin menghapus data kas harian ini?')) {
-      try {
-        await deleteDoc(doc(db, 'cashBalances', id));
-      } catch (err) {
-        handleFirestoreError(err, OperationType.DELETE, `cashBalances/${id}`);
-      }
+    setShowConfirmDeleteId(id);
+  };
+
+  const executeDelete = async (id: string) => {
+    try {
+      await onPersistDeleteDoc('cashBalances', id);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, `cashBalances/${id}`);
+    } finally {
+      setShowConfirmDeleteId(null);
     }
   };
 
@@ -594,6 +608,49 @@ export function CashModule({ cashBalances, userRole, currentUser, settings }: Ca
           </table>
         </div>
       </div>
+
+      {/* Non-blocking custom modal delete confirmation */}
+      {showConfirmDeleteId && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn" id="cash-confirm-delete-modal">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-xl border border-slate-100/80 flex flex-col gap-3 animate-scaleIn">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-full bg-rose-50 text-rose-600">
+                <ShieldAlert className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 text-xs tracking-tight">
+                  Hapus Laporan Harian
+                </h3>
+                <p className="text-[10px] text-slate-400">Konfirmasi Penghapusan Laporan Kas</p>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-slate-600 leading-normal">
+              Apakah Anda yakin ingin menghapus data catatan kas harian ini? Tindakan ini akan mengupdate rekap saldo rekening terkait secara permanen dan tidak dapat dibatalkan.
+            </p>
+
+            <div className="flex gap-2 justify-end mt-2">
+              <button
+                type="button"
+                onClick={() => setShowConfirmDeleteId(null)}
+                className="px-3.5 py-1.5 text-[11px] font-bold text-slate-500 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-all cursor-pointer"
+                id="btn-delete-cancel"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => executeDelete(showConfirmDeleteId)}
+                className="px-3.5 py-1.5 text-[11px] font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition-all cursor-pointer shadow-xs"
+                id="btn-delete-execute"
+              >
+                Ya, Hapus Data
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </motion.div>
   );
 }
