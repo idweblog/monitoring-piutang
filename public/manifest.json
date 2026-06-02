@@ -1,0 +1,36 @@
+{
+  "short_name": "Piutang",
+  "name": "Monitoring Piutang Rekanan",
+  "description": "Sistem monitoring piutang perusahaan, pelacakan tagihan customer, dan perhitungan potensi laba kotor.",
+  "icons": [
+    {
+      "src": "/logo-growth.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo-growth.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/logo-vault.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo-minimalist.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512",
+      "purpose": "any"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0f172a",
+  "theme_color": "#4f46e5",
+  "display": "standalone",
+  "orientation": "portrait"
+}

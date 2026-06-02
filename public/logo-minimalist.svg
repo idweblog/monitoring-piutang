@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="neonGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ec4899" />
+      <stop offset="50%" stop-color="#8b5cf6" />
+      <stop offset="100%" stop-color="#3b82f6" />
+    </linearGradient>
+    <filter id="neonGlow">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#8b5cf6" flood-opacity="0.3" />
+    </filter>
+  </defs>
+  <!-- Background Canvas -->
+  <rect width="512" height="512" rx="128" fill="#090d16" />
+  <!-- Inner Ring Grid -->
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#1e293b" stroke-width="4" />
+  <g filter="url(#neonGlow)">
+    <!-- Main Interlocking MP Path -->
+    <!-- M shape -->
+    <path d="M150 340 V180 L220 270 L290 180 V340" fill="none" stroke="url(#neonGrad)" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+    <!-- P shape (Intertwined) at the center-right -->
+    <path d="M290 200 H350 C385 200, 385 280, 350 280 H290" fill="none" stroke="url(#neonGrad)" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+    <!-- Dot point accent -->
+    <circle cx="350" cy="340" r="16" fill="#3b82f6" />
+  </g>
+</svg>
