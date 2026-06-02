@@ -1,0 +1,6 @@
+{
+  "name": "Monitoring Piutang Rekanan",
+  "description": "Sistem monitoring piutang perusahaan, pelacakan tagihan customer, dan perhitungan potensi laba kotor.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,161 @@
+{
+  "entities": {
+    "Payment": {
+      "title": "Payment",
+      "description": "Voucher or payment request draft submitted for approval or active monitoring",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "rekanan": { "type": "string" },
+        "tanggalBayar": { "type": "string" },
+        "jumlahBayar": { "type": "number" },
+        "metodeBayar": { "type": "string" },
+        "catatan": { "type": "string" },
+        "tanggalDeadlineTagihan": { "type": "string" },
+        "status": { "type": "string", "enum": ["Draft", "Aktif"] },
+        "approvedBy": { "type": "string" },
+        "tanggalApprove": { "type": "string" },
+        "hasInvoice": { "type": "boolean" }
+      },
+      "required": ["id", "rekanan", "tanggalBayar", "jumlahBayar", "metodeBayar", "tanggalDeadlineTagihan", "status", "hasInvoice"]
+    },
+    "Invoice": {
+      "title": "Invoice",
+      "description": "Customer tagihan bill detailing tax amounts and outstanding balance status",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "paymentId": { "type": "string" },
+        "rekanan": { "type": "string" },
+        "jumlahBayar": { "type": "number" },
+        "customerDebitur": { "type": "string" },
+        "nomorTagihan": { "type": "string" },
+        "tanggalTagihan": { "type": "string" },
+        "tanggalJatuhTempo": { "type": "string" },
+        "jumlahTagihKotor": { "type": "number" },
+        "ppnTarif": { "type": "number" },
+        "pphTarif": { "type": "number" },
+        "ppnNominal": { "type": "number" },
+        "pphNominal": { "type": "number" },
+        "totalTagihan": { "type": "number" },
+        "status": { "type": "string", "enum": ["Belum Lunas", "Lunas"] },
+        "tanggalLunas": { "type": "string" }
+      },
+      "required": ["id", "paymentId", "rekanan", "jumlahBayar", "customerDebitur", "nomorTagihan", "tanggalTagihan", "tanggalJatuhTempo", "jumlahTagihKotor", "ppnTarif", "pphTarif", "ppnNominal", "pphNominal", "totalTagihan", "status"]
+    },
+    "InvoiceLog": {
+      "title": "InvoiceLog",
+      "description": "Progress tracking history notes for physical documents of bills",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "invoiceId": { "type": "string" },
+        "tanggal": { "type": "string" },
+        "posisi": { "type": "string" },
+        "catatan": { "type": "string" },
+        "updatedBy": { "type": "string" }
+      },
+      "required": ["id", "invoiceId", "tanggal", "posisi", "catatan", "updatedBy"]
+    },
+    "AppNotification": {
+      "title": "AppNotification",
+      "description": "Push notices regarding billing deadlines or validation approvals",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "judul": { "type": "string" },
+        "deskripsi": { "type": "string" },
+        "tanggal": { "type": "string" },
+        "tipe": { "type": "string", "enum": ["deadline", "approval", "log", "system"] },
+        "read": { "type": "boolean" },
+        "linkTo": {
+          "type": "object",
+          "properties": {
+            "module": { "type": "string", "enum": ["payments", "invoices"] },
+            "id": { "type": "string" }
+          },
+          "required": ["module", "id"]
+        }
+      },
+      "required": ["id", "judul", "deskripsi", "tanggal", "tipe", "read"]
+    },
+    "CompanySettings": {
+      "title": "CompanySettings",
+      "description": "Global enterprise billing tax configuration controls",
+      "type": "object",
+      "properties": {
+        "namaPerusahaan": { "type": "string" },
+        "alamat": { "type": "string" },
+        "npwp": { "type": "string" },
+        "ppnDefault": { "type": "number" },
+        "pphDefault": { "type": "number" },
+        "formatNomorTagihan": { "type": "string" },
+        "notifDeadlineH3": { "type": "boolean" },
+        "notifDeadlineH1": { "type": "boolean" },
+        "isCustomLogo": { "type": "boolean" },
+        "metodePembayaranList": { "type": "array" },
+        "jatuhTempoHariDefault": { "type": "number" },
+        "rekananList": { "type": "array" },
+        "standardPositionsList": { "type": "array" }
+      },
+      "required": ["namaPerusahaan", "alamat", "npwp", "ppnDefault", "pphDefault", "formatNomorTagihan", "notifDeadlineH3", "notifDeadlineH1"]
+    },
+    "AppUser": {
+      "title": "AppUser",
+      "description": "Application operators holding permission keys to register and approve payments",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nama": { "type": "string" },
+        "username": { "type": "string" },
+        "role": { "type": "string", "enum": ["SUPERVISOR_KEUANGAN_UMUM", "STAF_ADMINISTRASI_UMUM", "DIREKTUR", "ADMINISTRATOR"] },
+        "password": { "type": "string" }
+      },
+      "required": ["id", "nama", "username", "role"]
+    },
+    "DailyCashBalance": {
+      "title": "DailyCashBalance",
+      "description": "Daily balance records of company cash books and bank accounts in dynamic map entry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "tanggal": { "type": "string" },
+        "balances": { "type": "object" },
+        "catatan": { "type": "string" },
+        "updatedBy": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "tanggal", "balances"]
+    }
+  },
+  "firestore": {
+    "/payments/{paymentId}": {
+      "schema": "Payment",
+      "description": "Collection of payment requests."
+    },
+    "/invoices/{invoiceId}": {
+      "schema": "Invoice",
+      "description": "Collection of customer invoices."
+    },
+    "/logs/{logId}": {
+      "schema": "InvoiceLog",
+      "description": "Collection of historic tracking positions."
+    },
+    "/notifications/{notifId}": {
+      "schema": "AppNotification",
+      "description": "Collection of app alert logs."
+    },
+    "/settings/{settingId}": {
+      "schema": "CompanySettings",
+      "description": "Enterprise configurations."
+    },
+    "/users/{userId}": {
+      "schema": "AppUser",
+      "description": "Collection of operators allowed to access the system."
+    },
+    "/cashBalances/{balanceId}": {
+      "schema": "DailyCashBalance",
+      "description": "Daily cash balances."
+    }
+  }
+}
