@@ -1953,8 +1953,37 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
             {activeTab === 'system' && (
               <div className="space-y-4 animate-fadeIn" id="content-system">
                 <div>
-                  <h3 className="text-sm font-bold text-slate-800">Opsi Pengembang & Pembersihan Data</h3>
+                  <h3 className="text-sm font-bold text-slate-800">Opsi Pengembang, Keamanan &amp; Pembersihan Data</h3>
                   <p className="text-xs text-slate-400 mt-1">Dipergunakan untuk melakukan pengaturan dan pembersihan data operasional sistem.</p>
+                </div>
+
+                {/* Security Setting: Visibilitas Akun Demo */}
+                <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-xl space-y-3">
+                  <h4 className="text-xs font-bold text-slate-850">Visibilitas Akses Instan Demo di Halaman Login</h4>
+                  <p className="text-slate-600 text-xs leading-relaxed">
+                    Secara default, halaman login menampilkan tombol akses instan demo untuk memudahkan pengujian pertama kali. Di lingkungan produksi nyata, Anda disarankan untuk <strong>menonaktifkan</strong> akses instan ini agar pengguna luar tidak dapat masuk otomatis secara bebas menggunakan kredensial demo bawaan pabrik.
+                  </p>
+                  
+                  <div className="flex items-center gap-3 pt-1">
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={!!settings.disableDemoLogin}
+                        onChange={(e) => {
+                          onUpdateSettings({
+                            ...settings,
+                            disableDemoLogin: e.target.checked
+                          });
+                        }}
+                        className="sr-only peer"
+                        id="toggle-disable-demo-login"
+                      />
+                      <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-650"></div>
+                      <span className="ml-2.5 text-xs font-semibold text-slate-700">
+                        {settings.disableDemoLogin ? 'Sembunyikan Akses Instan (Disarankan untuk Produksi)' : 'Tampilkan Akses Instan (Sistem dalam Mode Demo/Pengujian)'}
+                      </span>
+                    </label>
+                  </div>
                 </div>
 
                  {/* Option 1: Empty All Transactions */}

@@ -831,10 +831,10 @@ export default function App() {
   };
 
   const handleInstantDemoLogin = (role: 'SUPER_ADMIN' | 'SUPERVISOR' | 'STAFF' | 'DIRECTOR') => {
-    let username = 'agus_admin';
-    if (role === 'SUPERVISOR') username = 'budi_keu';
-    else if (role === 'STAFF') username = 'rina_admin';
-    else if (role === 'DIRECTOR') username = 'hadi_dir';
+    let username = 'anditasb';
+    if (role === 'SUPERVISOR') username = 'hasrianti';
+    else if (role === 'STAFF') username = 'muh.arash';
+    else if (role === 'DIRECTOR') username = 'anditasb';
 
     const found = users.find(u => u.username.toLowerCase() === username.toLowerCase());
     if (found) {
@@ -843,7 +843,7 @@ export default function App() {
       localStorage.setItem('monitoring_logged_in_user', JSON.stringify(found));
       localStorage.setItem('monitoring_role', found.role);
       setLoginError('');
-      alert(`Berhasil masuk sebagai ${found.nama} (${found.role === 'ADMINISTRATOR' ? 'Sistem Administrator' : found.role === 'DIREKTUR' ? 'Direktur Utama' : found.role === 'SUPERVISOR_KEUANGAN_UMUM' ? 'Supervisor Keuangan' : 'Staf Administrasi'}). Selamat datang!`);
+      alert(`Berhasil masuk sebagai ${found.nama} (${found.role === 'ADMINISTRATOR' ? 'Administrator & Direktur' : found.role === 'DIREKTUR' ? 'Direktur Utama' : found.role === 'SUPERVISOR_KEUANGAN_UMUM' ? 'Supervisor Keuangan & Umum' : 'Staf Administrasi & Umum'}). Selamat datang!`);
     } else {
       // Fallback if users array hasn't synchronized yet or is empty
       const fallbackUser = INITIAL_USERS.find(u => u.username.toLowerCase() === username.toLowerCase()) || INITIAL_USERS[0];
@@ -852,7 +852,7 @@ export default function App() {
       localStorage.setItem('monitoring_logged_in_user', JSON.stringify(fallbackUser));
       localStorage.setItem('monitoring_role', fallbackUser.role);
       setLoginError('');
-      alert(`Berhasil masuk sebagai ${fallbackUser.nama} (${fallbackUser.role === 'ADMINISTRATOR' ? 'Sistem Administrator' : fallbackUser.role === 'DIREKTUR' ? 'Direktur Utama' : fallbackUser.role === 'SUPERVISOR_KEUANGAN_UMUM' ? 'Supervisor Keuangan' : 'Staf Administrasi'}). Selamat datang!`);
+      alert(`Berhasil masuk sebagai ${fallbackUser.nama} (${fallbackUser.role === 'ADMINISTRATOR' ? 'Administrator & Direktur' : fallbackUser.role === 'DIREKTUR' ? 'Direktur Utama' : fallbackUser.role === 'SUPERVISOR_KEUANGAN_UMUM' ? 'Supervisor Keuangan & Umum' : 'Staf Administrasi & Umum'}). Selamat datang!`);
     }
   };
 
@@ -1672,58 +1672,53 @@ export default function App() {
                   Masuk dengan Akun Google
                 </button>
 
-                <div className="relative my-4">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-slate-250/80" />
-                  </div>
-                  <div className="relative flex justify-center text-xs">
-                    <span className="bg-white px-2.5 text-[10px] text-indigo-600 font-bold uppercase tracking-widest">Atau Akses Instan Demo</span>
-                  </div>
-                </div>
+                {!settings.disableDemoLogin && (
+                  <>
+                    <div className="relative my-4">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-slate-250/80" />
+                      </div>
+                      <div className="relative flex justify-center text-xs">
+                        <span className="bg-white px-2.5 text-[10px] text-indigo-600 font-bold uppercase tracking-widest">Atau Akses Instan Demo</span>
+                      </div>
+                    </div>
 
-                <div className="space-y-1.5" id="demo-quick-login-container">
-                  <p className="text-[10px] text-slate-400 text-center font-medium leading-normal mb-2">
-                    Gunakan salah satu kredensial bawaan berikut untuk langsung masuk otomatis ke dashboard monitoring piutang tanpa input manual:
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleInstantDemoLogin('SUPER_ADMIN')}
-                      className="p-2.5 border border-violet-100 bg-violet-50/40 hover:bg-violet-100 text-violet-800 hover:text-violet-950 rounded-xl text-[10px] font-black text-center cursor-pointer transition-all flex flex-col justify-center items-center shadow-xs"
-                      id="btn-demo-admin"
-                    >
-                      🛡️ Administrator
-                      <span className="text-[8px] font-semibold text-violet-500 font-mono mt-0.5">agus_admin</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleInstantDemoLogin('SUPERVISOR')}
-                      className="p-2.5 border border-indigo-100 bg-indigo-50/40 hover:bg-indigo-100 text-indigo-800 hover:text-indigo-950 rounded-xl text-[10px] font-black text-center cursor-pointer transition-all flex flex-col justify-center items-center shadow-xs"
-                      id="btn-demo-supervisor"
-                    >
-                      💰 Spv Keuangan
-                      <span className="text-[8px] font-semibold text-indigo-500 font-mono mt-0.5">budi_keu</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleInstantDemoLogin('STAFF')}
-                      className="p-2.5 border border-amber-100 bg-amber-50/40 hover:bg-amber-100 text-amber-800 hover:text-amber-950 rounded-xl text-[10px] font-black text-center cursor-pointer transition-all flex flex-col justify-center items-center shadow-xs"
-                      id="btn-demo-staff"
-                    >
-                      📋 Staf Admin
-                      <span className="text-[8px] font-semibold text-amber-500 font-mono mt-0.5">rina_admin</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleInstantDemoLogin('DIRECTOR')}
-                      className="p-2.5 border border-emerald-100 bg-emerald-50/40 hover:bg-emerald-100 text-emerald-800 hover:text-emerald-950 rounded-xl text-[10px] font-black text-center cursor-pointer transition-all flex flex-col justify-center items-center shadow-xs"
-                      id="btn-demo-director"
-                    >
-                      👔 Direktur Utama
-                      <span className="text-[8px] font-semibold text-emerald-500 font-mono mt-0.5">hadi_dir</span>
-                    </button>
-                  </div>
-                </div>
+                    <div className="space-y-1.5" id="demo-quick-login-container">
+                      <p className="text-[10px] text-slate-400 text-center font-medium leading-normal mb-2">
+                        Gunakan salah satu kredensial bawaan berikut untuk langsung masuk otomatis ke dashboard monitoring piutang tanpa input manual:
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleInstantDemoLogin('SUPER_ADMIN')}
+                          className="p-2.5 border border-violet-100 bg-violet-50/40 hover:bg-violet-100 text-violet-800 hover:text-violet-950 rounded-xl text-[10px] font-black text-center cursor-pointer transition-all flex flex-col justify-center items-center shadow-xs"
+                          id="btn-demo-admin"
+                        >
+                          🛡️ Admin &amp; Direktur
+                          <span className="text-[8px] font-semibold text-violet-500 font-mono mt-0.5">anditasb</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleInstantDemoLogin('SUPERVISOR')}
+                          className="p-2.5 border border-indigo-100 bg-indigo-50/40 hover:bg-indigo-100 text-indigo-800 hover:text-indigo-950 rounded-xl text-[10px] font-black text-center cursor-pointer transition-all flex flex-col justify-center items-center shadow-xs"
+                          id="btn-demo-supervisor"
+                        >
+                          💰 Spv Keuangan
+                          <span className="text-[8px] font-semibold text-indigo-500 font-mono mt-0.5">hasrianti</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleInstantDemoLogin('STAFF')}
+                          className="p-2.5 border border-amber-100 bg-amber-50/40 hover:bg-amber-100 text-amber-800 hover:text-amber-950 rounded-xl text-[10px] font-black text-center cursor-pointer transition-all flex flex-col justify-center items-center shadow-xs"
+                          id="btn-demo-staff"
+                        >
+                          📋 Staf Administrasi
+                          <span className="text-[8px] font-semibold text-amber-500 font-mono mt-0.5">muh.arash</span>
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )

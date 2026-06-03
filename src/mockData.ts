@@ -55,10 +55,9 @@ export const DEFAULT_SETTINGS: CompanySettings = {
 };
 
 export const INITIAL_USERS: AppUser[] = [
-  { id: 'usr-1', nama: 'Budi Santoso', username: 'budi_keu', role: 'SUPERVISOR_KEUANGAN_UMUM', password: 'budi' },
-  { id: 'usr-2', nama: 'Rina Wijaya', username: 'rina_admin', role: 'STAF_ADMINISTRASI_UMUM', password: 'rina' },
-  { id: 'usr-3', nama: 'Hadi Pranoto', username: 'hadi_dir', role: 'DIREKTUR', password: 'hadi' },
-  { id: 'usr-4', nama: 'Agus Setiawan', username: 'agus_admin', role: 'ADMINISTRATOR', password: 'agus' },
+  { id: 'usr-1', nama: 'Andita Sely bestoro', username: 'anditasb', role: 'ADMINISTRATOR', password: 'Setra(2025)' },
+  { id: 'usr-2', nama: 'Hasrianti', username: 'hasrianti', role: 'SUPERVISOR_KEUANGAN_UMUM', password: 'Setra(2025)' },
+  { id: 'usr-3', nama: 'Muh. Arash Arisiah', username: 'muh.arash', role: 'STAF_ADMINISTRASI_UMUM', password: 'Setra(2025)' },
 ];
 
 export const INITIAL_PAYMENTS: Payment[] = [

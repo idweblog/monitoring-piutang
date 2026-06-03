@@ -65,14 +65,19 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   throw new Error(JSON.stringify(errInfo));
 }
 
+export const isFirebaseConfigured = rawProjectId !== '' && rawProjectId !== 'unconfigured-firebase-project-id' && rawProjectId !== 'your-project-id';
+
 // Connection check validation as mandated by the Firebase Skill Guidelines
 async function testConnection() {
+  if (!isFirebaseConfigured) {
+    return;
+  }
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
     console.log('Successfully pinged the cloud Firestore database instance');
   } catch (error) {
     if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration. The client is offline.");
+      console.warn("Please check your Firebase configuration. The client is offline.");
     }
   }
 }

@@ -88,6 +88,7 @@ export interface CompanySettings {
   activeLogoId?: string;
   pwaName?: string;
   pwaShortName?: string;
+  disableDemoLogin?: boolean;
 }
 
 export interface AppUser {
