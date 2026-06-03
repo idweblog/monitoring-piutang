@@ -873,7 +873,16 @@ export default function App() {
     }
 
     // Find user in the database
-    const foundUser = users.find(u => u.username.toLowerCase() === trimmedUsername.toLowerCase());
+    let foundUser = users.find(u => u.username.toLowerCase() === trimmedUsername.toLowerCase());
+
+    // Self-healing fallback: If not in database but matches hardcoded default, auto-seed/register it!
+    if (!foundUser) {
+      const fallbackMatch = INITIAL_USERS.find(u => u.username.toLowerCase() === trimmedUsername.toLowerCase());
+      if (fallbackMatch && fallbackMatch.password === trimmedPassword) {
+        persistSetDoc('users', fallbackMatch.id, fallbackMatch);
+        foundUser = fallbackMatch;
+      }
+    }
 
     if (foundUser) {
       const dbPassword = foundUser.password || 'admin123';
