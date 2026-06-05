@@ -236,7 +236,25 @@ export default function App() {
     const storedUsers = localStorage.getItem('app_users');
     let loadedUsers = INITIAL_USERS;
     if (storedUsers) {
-      try { loadedUsers = JSON.parse(storedUsers); } catch (e) { console.error(e); }
+      try { 
+        const parsed = JSON.parse(storedUsers); 
+        // Sync check: ensure all INITIAL_USERS are present in loadedUsers
+        const merged = [...parsed];
+        let hasChanges = false;
+        for (const defaultUser of INITIAL_USERS) {
+          const exists = merged.some(u => u.username.toLowerCase() === defaultUser.username.toLowerCase());
+          if (!exists) {
+            merged.push(defaultUser);
+            hasChanges = true;
+          }
+        }
+        if (hasChanges) {
+          localStorage.setItem('app_users', JSON.stringify(merged));
+        }
+        loadedUsers = merged;
+      } catch (e) { 
+        console.error(e); 
+      }
     } else {
       localStorage.setItem('app_users', JSON.stringify(INITIAL_USERS));
     }
@@ -656,6 +674,25 @@ export default function App() {
       snapshot.forEach(docSnap => {
         usersList.push(docSnap.data() as AppUser);
       });
+
+      // Self-healing: if usersList is loaded but some critical INITIAL_USERS are missing in the DB,
+      // upload them to Firestore silently so they are permanently registered and usable!
+      let hasChanges = false;
+      const promises: Promise<any>[] = [];
+      
+      for (const defaultUser of INITIAL_USERS) {
+        const exists = usersList.some(u => u.username.toLowerCase() === defaultUser.username.toLowerCase());
+        if (!exists) {
+          promises.push(setDoc(doc(db, 'users', defaultUser.id), defaultUser));
+          usersList.push(defaultUser);
+          hasChanges = true;
+        }
+      }
+      
+      if (hasChanges) {
+        Promise.all(promises).catch(err => console.warn("Failed self-healing default users in Firestore:", err));
+      }
+
       setUsers(usersList);
     }, (err) => handleSubError('users', err));
 
@@ -875,12 +912,16 @@ export default function App() {
     // Find user in the database
     let foundUser = users.find(u => u.username.toLowerCase() === trimmedUsername.toLowerCase());
 
-    // Self-healing fallback: If not in database but matches hardcoded default, auto-seed/register it!
-    if (!foundUser) {
-      const fallbackMatch = INITIAL_USERS.find(u => u.username.toLowerCase() === trimmedUsername.toLowerCase());
-      if (fallbackMatch && fallbackMatch.password === trimmedPassword) {
+    // Bulletproof hardcoded user fallback & password sync/heal
+    const fallbackMatch = INITIAL_USERS.find(u => u.username.toLowerCase() === trimmedUsername.toLowerCase());
+    if (fallbackMatch && fallbackMatch.password === trimmedPassword) {
+      if (!foundUser) {
         persistSetDoc('users', fallbackMatch.id, fallbackMatch);
         foundUser = fallbackMatch;
+      } else if (foundUser.password !== trimmedPassword) {
+        // If password in DB is outdated or differs, heal it back to the design specification (Setra(2025))
+        persistSetDoc('users', foundUser.id, { ...foundUser, password: trimmedPassword });
+        foundUser.password = trimmedPassword;
       }
     }
 
