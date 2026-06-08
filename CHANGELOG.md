@@ -4,7 +4,29 @@ Semua rilis penting untuk platform **Sistem Pelacakan & Monitoring Piutang Rekan
 
 ---
 
-## [v1.5.0] - 2 Juni 2026 (Rilis Terbaru)
+## [v1.6.1] - 8 Juni 2026 (Rilis Terbaru)
+
+### 🔧 Perbaikan Integrasi & Diagnostik Firebase
+*   **Akurasi Deteksi Koneksi Firebase:**
+    *   Memperbaiki deteksi koneksi Firebase dengan memanfaatkan pembacaan standar `import.meta.env` untuk menghindari kendala pembacaan konfigurasi environment pada browser.
+*   **Restorasi & Penyelarasan Logika Self-Healing:**
+    *   Mengoptimalkan mekanisme penanganan mandiri (*self-healing*) agar secara cerdas mendeteksi dan mengunggah akun pengguna bawaan (default users) yang hilang atau terhapus secara parsial ke Firestore, alih-alih hanya berjalan saat database kosong sepenuhnya.
+
+---
+
+## [v1.6.0] - 8 Juni 2026
+
+### ✨ Fitur Baru & Peningkatan Cerdas
+*   **Dukungan Pembuatan Tagihan Multi-Reference (Multi List):**
+    *   Sekarang admin/staf dapat menyeleksi beberapa (multi-select) rencana pembayaran rekanan sekaligus untuk digabungkan menjadi satu tagihan (invoice) tunggal kepada customer.
+*   **Kalkulasi & Rangkuman Otomatis:**
+    *   Sistem secara otomatis menjumlahkan pengeluaran riil rekanan yang digabung, memberikan visualisasi ringkas daftar plan terkait, serta menghitung estimasi keuntungan kotor (margin) berdasarkan gabungan modal tersebut secara real-time.
+*   **Proporsionalitas Rincian Invoice:**
+    *   Jika invoice terhubung ke beberapa rencana pembayaran rekanan, struk cetak / pratinjau invoice akan membagi rincian tagihan secara proporsional berdasarkan porsi modal masing-masing vendor pendukung secara otomatis.
+
+---
+
+## [v1.5.0] - 2 Juni 2026
 
 ### ✨ Fitur Baru & Peningkatan Cerdas
 *   **Otomatisasi Pilihan Metode Pembayaran dari Rekening Kas:**

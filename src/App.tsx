@@ -57,7 +57,7 @@ export default function App() {
       const configFiles = (import.meta as any).glob('../firebase-applet-config.json', { eager: true });
       const configKeys = Object.keys(configFiles);
       const firebaseConfigJson: any = configKeys.length > 0 ? (configFiles[configKeys[0]] as any).default : {};
-      const projId = (import.meta as any).env.VITE_FIREBASE_PROJECT_ID || firebaseConfigJson.projectId || '';
+      const projId = import.meta.env.VITE_FIREBASE_PROJECT_ID || firebaseConfigJson.projectId || '';
       return projId !== '' && projId !== 'your-project-id';
     } catch (e) {
       return false;
