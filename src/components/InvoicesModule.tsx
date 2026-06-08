@@ -23,7 +23,9 @@ import {
   Printer, 
   Send,
   X,
-  FileMinus
+  FileMinus,
+  FileDown,
+  Tag
 } from 'lucide-react';
 import { Payment, Invoice, InvoiceLog, UserRole, CompanySettings } from '../types';
 
@@ -53,6 +55,11 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Belum Lunas' | 'Lunas'>('All');
   const [isAddingNew, setIsAddingNew] = useState(false);
+
+  // New filters
+  const [filterStartDate, setFilterStartDate] = useState('');
+  const [filterEndDate, setFilterEndDate] = useState('');
+  const [filterKategori, setFilterKategori] = useState('All');
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [selectedPayments, setSelectedPayments] = useState<Payment[]>([]);
 
@@ -277,15 +284,92 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
     return 'Rp ' + num.toLocaleString('id-ID');
   };
 
+  const categoryOptions = settings?.kategoriList || [
+    'Pemasaran',
+    'SDM',
+    'Humas',
+    'Operasional',
+    'Logistik',
+    'Umum'
+  ];
+
   // Filters
   const eligiblePayments = payments.filter(p => p.status === 'Aktif' && !p.hasInvoice);
   const filteredInvoices = invoices.filter(inv => {
-    const matchesSearch = inv.customerDebitur.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          inv.nomorTagihan.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          inv.rekanan.toLowerCase().includes(searchTerm.toLowerCase());
+    const normalizedKeyword = searchTerm.toLowerCase();
+
+    // Associated payments for Category checking and catatans
+    const linkedIds = inv.paymentIds || [inv.paymentId].filter(Boolean);
+    const linkedPayments = payments.filter(p => linkedIds.includes(p.id));
+    const linkedCategories = linkedPayments.map(p => p.kategori || '').filter(Boolean);
+    const linkedCatatans = linkedPayments.map(p => p.catatan).join(' ').toLowerCase();
+
+    const matchesSearch = 
+      inv.customerDebitur.toLowerCase().includes(normalizedKeyword) || 
+      inv.nomorTagihan.toLowerCase().includes(normalizedKeyword) ||
+      inv.rekanan.toLowerCase().includes(normalizedKeyword) ||
+      linkedCatatans.includes(normalizedKeyword) ||
+      linkedCategories.some(cat => cat.toLowerCase().includes(normalizedKeyword));
+
     const matchesStatus = statusFilter === 'All' || inv.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesKategori = filterKategori === 'All' || linkedPayments.some(p => p.kategori === filterKategori);
+
+    let matchesDate = true;
+    if (filterStartDate) {
+      matchesDate = matchesDate && inv.tanggalTagihan >= filterStartDate;
+    }
+    if (filterEndDate) {
+      matchesDate = matchesDate && inv.tanggalTagihan <= filterEndDate;
+    }
+
+    return matchesSearch && matchesStatus && matchesKategori && matchesDate;
   });
+
+  const handleDownloadInvoicesCSV = () => {
+    const headers = ['ID Tagihan', 'Customer / Debitur', 'No. Tagihan', 'Pemasok / Vendor', 'Pajak PPN (%)', 'Pajak PPh (%)', 'Total Tagihan (Rp)', 'Tgl Tagihan', 'Jatuh Tempo', 'Status Pembayaran', 'Kategori Terkait'];
+    
+    const rows = filteredInvoices.map(inv => {
+      // Find linked categories
+      const linkedIds = inv.paymentIds || [inv.paymentId].filter(Boolean);
+      const linkedPayments = payments.filter(p => linkedIds.includes(p.id));
+      const catsOption = linkedPayments.map(p => p.kategori || 'Tanpa Kategori');
+      const catsString = Array.from(new Set(catsOption)).join(', ') || 'Tanpa Kategori';
+
+      return [
+        inv.id,
+        inv.customerDebitur,
+        inv.nomorTagihan,
+        inv.rekanan,
+        inv.ppnTarif,
+        inv.pphTarif,
+        inv.totalTagihan,
+        inv.tanggalTagihan,
+        inv.tanggalJatuhTempo,
+        inv.status,
+        catsString
+      ];
+    });
+
+    const csvRows = [headers.join(','), ...rows.map(r => r.map(x => {
+      const strVal = String(x);
+      if (strVal.includes(',') || strVal.includes('\n') || strVal.includes('"')) {
+        return `"${strVal.replace(/"/g, '""')}"`;
+      }
+      return strVal;
+    }).join(','))];
+    
+    const csvString = csvRows.join('\r\n');
+    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvString], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    
+    const dateStr = new Date().toISOString().split('T')[0];
+    link.setAttribute('download', `Daftar_Tagihan_PT_Semen_${dateStr}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const canEditInvoice = userRole === 'STAF_ADMINISTRASI_UMUM' || userRole === 'SUPERVISOR_KEUANGAN_UMUM' || userRole === 'ADMINISTRATOR';
 
@@ -591,35 +675,99 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
 
       {/* Invoice Filter Options */}
       <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden" id="invoices-list-card">
-        <div className="p-4 border-b border-slate-100 bg-slate-50/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="relative max-w-sm w-full sm:w-72">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Cari customer, no invoice, rekanan..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="text-xs w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500"
-              id="search-invoices"
-            />
+        <div className="p-4 border-b border-slate-100 bg-slate-50/40 space-y-3">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            {/* Search */}
+            <div className="relative max-w-sm w-full lg:w-72">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Cari customer, no invoice, rekanan..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="text-xs w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 font-medium"
+                id="search-invoices"
+              />
+            </div>
+
+            {/* Status filters */}
+            <div className="flex flex-wrap items-center gap-1.5 animate-fadeIn">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Status:</span>
+              {(['All', 'Belum Lunas', 'Lunas'] as const).map((status) => (
+                <button
+                  key={status}
+                  onClick={() => setStatusFilter(status)}
+                  className={`text-xs px-3 py-1.5 font-bold rounded-lg transition-all cursor-pointer ${
+                    statusFilter === status 
+                      ? 'bg-slate-800 text-white' 
+                      : 'bg-white text-slate-600 border border-slate-100 hover:bg-slate-50'
+                  }`}
+                  id={`btn-filter-invoice-${status}`}
+                >
+                  {status === 'All' ? 'Semua' : status}
+                </button>
+              ))}
+            </div>
+
+            {/* Download Button */}
+            <button
+              onClick={handleDownloadInvoicesCSV}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all self-stretch lg:self-auto cursor-pointer shadow-2xs"
+              id="btn-download-invoices-csv"
+              type="button"
+            >
+              <FileDown className="h-4 w-4 shrink-0" />
+              Ekspor ke Excel / CSV
+            </button>
           </div>
 
-          <div className="flex items-center gap-1.5 self-start sm:self-auto">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Filter Status:</span>
-            {(['All', 'Belum Lunas', 'Lunas'] as const).map((status) => (
-              <button
-                key={status}
-                onClick={() => setStatusFilter(status)}
-                className={`text-xs px-3 py-1.5 font-bold rounded-lg transition-all cursor-pointer ${
-                  statusFilter === status 
-                    ? 'bg-slate-800 text-white' 
-                    : 'bg-white text-slate-600 border border-slate-100 hover:bg-slate-50'
-                }`}
-                id={`btn-filter-invoice-${status}`}
+          {/* Sub-Filters: Category & Date range */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2.5 border-t border-slate-100/50">
+            {/* Category selection */}
+            <div className="flex flex-col gap-1 text-left">
+              <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
+                <Tag className="h-3 w-3 text-indigo-500" />
+                Saring Kategori Pembayaran Terkait
+              </label>
+              <select
+                value={filterKategori}
+                onChange={(e) => setFilterKategori(e.target.value)}
+                className="text-xs p-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 font-semibold text-slate-700"
               >
-                {status === 'All' ? 'Semua' : status}
-              </button>
-            ))}
+                <option value="All">Semua Kategori</option>
+                {categoryOptions.map((kat) => (
+                  <option key={kat} value={kat}>{kat}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Start Date */}
+            <div className="flex flex-col gap-1 text-left">
+              <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
+                <Calendar className="h-3 w-3 text-slate-400" />
+                Awal Tanggal Invoice
+              </label>
+              <input
+                type="date"
+                value={filterStartDate}
+                onChange={(e) => setFilterStartDate(e.target.value)}
+                className="text-xs p-1.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 font-medium text-slate-700"
+              />
+            </div>
+
+            {/* End Date */}
+            <div className="flex flex-col gap-1 text-left">
+              <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
+                <Calendar className="h-3 w-3 text-slate-400" />
+                Akhir Tanggal Invoice
+              </label>
+              <input
+                type="date"
+                value={filterEndDate}
+                onChange={(e) => setFilterEndDate(e.target.value)}
+                className="text-xs p-1.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 font-medium text-slate-700"
+              />
+            </div>
           </div>
         </div>
 

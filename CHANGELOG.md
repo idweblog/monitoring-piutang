@@ -4,7 +4,23 @@ Semua rilis penting untuk platform **Sistem Pelacakan & Monitoring Piutang Rekan
 
 ---
 
-## [v1.6.1] - 8 Juni 2026 (Rilis Terbaru)
+## [v1.7.0] - 8 Juni 2026 (Rilis Terbaru)
+
+### ✨ Kategori Kustom, Filter Lanjutan, & Ekspor Excel/CSV Ter-filter
+*   **Manajemen Kategori Anggaran Kustom:**
+    *   Pihak Admin kini dapat menambah, mengedit, dan menghapus kategori pembayaran (seperti Pemasaran, SDM, Humas, Operasional, dll.) secara dinamis melalui menu Pengaturan baru yang bernama "Manajemen Kategori".
+    *   Kategori terpilih dapat langsung ditentukan saat menyusun Rencana Pembayaran rekanan baru.
+*   **Saringan Multi-Kriteria Tingkat Lanjut (Advanced Filters):**
+    *   Mengintegrasikan filter yang andal pada baris Daftar Rencana Pembayaran maupun Daftar Tagihan (Invoice / Piutang).
+    *   Pengguna dapat menyaring, mencari, dan mengelompokkan data berdasarkan rentang awal s.d. akhir tanggal, filter kategori spesifik, serta pencarian kata kunci yang fleksibel.
+*   **Ekspor Laporan CSV Cerdas (Dukungan Excel):**
+    *   Menambahkan tombol "Ekspor ke Excel / CSV" di kedua modul pembayaran dan invoice.
+    *   Ekstraksi data yang diunduh secara cerdas menyesuaikan dengan saringan (filter) yang aktif di layar saat itu juga.
+    *   Format data yang aman dengan UTF-8 BOM agar langsung kompatibel dibuka di Microsoft Excel tanpa masalah karakter spesial.
+
+---
+
+## [v1.6.1] - 8 Juni 2026
 
 ### 🔧 Perbaikan Integrasi & Diagnostik Firebase
 *   **Akurasi Deteksi Koneksi Firebase:**

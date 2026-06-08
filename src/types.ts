@@ -17,6 +17,7 @@ export interface Payment {
   approvedBy?: string;
   tanggalApprove?: string;
   hasInvoice: boolean;
+  kategori?: string;
 }
 
 export interface Invoice {
@@ -90,6 +91,7 @@ export interface CompanySettings {
   pwaName?: string;
   pwaShortName?: string;
   disableDemoLogin?: boolean;
+  kategoriList?: string[];
 }
 
 export interface AppUser {

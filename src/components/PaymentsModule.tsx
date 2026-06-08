@@ -16,7 +16,9 @@ import {
   DollarSign, 
   Check, 
   X,
-  FileSpreadsheet
+  FileSpreadsheet,
+  FileDown,
+  Tag
 } from 'lucide-react';
 import { Payment, UserRole, CompanySettings } from '../types';
 
@@ -49,9 +51,14 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
   onClearSelection,
   settings,
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm ] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Draft' | 'Aktif'>('All');
   const [isAddingNew, setIsAddingNew] = useState(false);
+
+  // New filter states
+  const [filterStartDate, setFilterStartDate] = useState('');
+  const [filterEndDate, setFilterEndDate] = useState('');
+  const [filterKategori, setFilterKategori] = useState('All');
 
   const paymentMethods = settings?.metodePembayaranList || [
     'Transfer Mandiri',
@@ -61,6 +68,15 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
     'Tunai'
   ];
 
+  const categoryOptions = settings?.kategoriList || [
+    'Pemasaran',
+    'SDM',
+    'Humas',
+    'Operasional',
+    'Logistik',
+    'Umum'
+  ];
+
   // Form states
   const [rekanan, setRekanan] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -68,14 +84,18 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
   const [jumlahBayar, setJumlahBayar] = useState<number | ''>('');
   const [jumlahBayarDisplay, setJumlahBayarDisplay] = useState('');
   const [metodeBayar, setMetodeBayar] = useState(paymentMethods[0] || 'Transfer Mandiri');
+  const [kategori, setKategori] = useState(categoryOptions[0] || '');
   const [catatan, setCatatan] = useState('');
   const [tanggalDeadline, setTanggalDeadline] = useState('');
   const [formError, setFormError] = useState('');
 
-  // Sync methods from settings on change
+  // Sync methods & categories from settings on change
   useEffect(() => {
     if (paymentMethods.length > 0) {
       setMetodeBayar(paymentMethods[0]);
+    }
+    if (categoryOptions.length > 0) {
+      setKategori(categoryOptions[0]);
     }
   }, [settings]);
 
@@ -134,6 +154,7 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
       tanggalBayar,
       jumlahBayar: Number(jumlahBayar),
       metodeBayar,
+      kategori,
       catatan,
       tanggalDeadlineTagihan: tanggalDeadline,
       status: 'Draft', // always begins as draft by Spv. Keuangan
@@ -144,19 +165,74 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
     setJumlahBayar('');
     setJumlahBayarDisplay('');
     setMetodeBayar(paymentMethods[0] || 'Transfer Mandiri');
+    setKategori(categoryOptions[0] || '');
     setCatatan('');
     setIsAddingNew(false);
   };
 
   const filteredPayments = payments.filter((p) => {
-    const matchesSearch = p.rekanan.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          p.catatan.toLowerCase().includes(searchTerm.toLowerCase());
+    const normalizedKeyword = searchTerm.toLowerCase();
+    const matchesSearch = 
+      p.rekanan.toLowerCase().includes(normalizedKeyword) || 
+      p.catatan.toLowerCase().includes(normalizedKeyword) ||
+      (p.kategori || '').toLowerCase().includes(normalizedKeyword) ||
+      p.metodeBayar.toLowerCase().includes(normalizedKeyword);
+
     const matchesStatus = statusFilter === 'All' || p.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesKategori = filterKategori === 'All' || p.kategori === filterKategori;
+
+    let matchesDate = true;
+    if (filterStartDate) {
+      matchesDate = matchesDate && p.tanggalBayar >= filterStartDate;
+    }
+    if (filterEndDate) {
+      matchesDate = matchesDate && p.tanggalBayar <= filterEndDate;
+    }
+
+    return matchesSearch && matchesStatus && matchesKategori && matchesDate;
   });
 
   const formatRupiah = (num: number) => {
     return 'Rp ' + num.toLocaleString('id-ID');
+  };
+
+  const handleDownloadCSV = () => {
+    const headers = ['ID Pembayaran', 'Nama Rekanan', 'Kategori', 'Tanggal Bayar', 'Jumlah Pembayaran (Rp)', 'Metode Bayar', 'Deadline Tagihan', 'Status', 'Approve Oleh', 'Tanggal Approve', 'Sudah Ada Invoice', 'Catatan'];
+    
+    const rows = filteredPayments.map(p => [
+      p.id,
+      p.rekanan,
+      p.kategori || 'Tanpa Kategori',
+      p.tanggalBayar,
+      p.jumlahBayar,
+      p.metodeBayar,
+      p.tanggalDeadlineTagihan,
+      p.status,
+      p.approvedBy || '-',
+      p.tanggalApprove || '-',
+      p.hasInvoice ? 'Ya' : 'Belum',
+      p.catatan.replace(/"/g, '""')
+    ]);
+
+    const csvRows = [headers.join(','), ...rows.map(r => r.map(x => {
+      const strVal = String(x);
+      if (strVal.includes(',') || strVal.includes('\n') || strVal.includes('"')) {
+        return `"${strVal.replace(/"/g, '""')}"`;
+      }
+      return strVal;
+    }).join(','))];
+    
+    const csvString = csvRows.join('\r\n');
+    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvString], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    
+    const dateStr = new Date().toISOString().split('T')[0];
+    link.setAttribute('download', `Daftar_Pembayaran_Rekanan_${dateStr}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const canCreate = userRole === 'SUPERVISOR_KEUANGAN_UMUM' || userRole === 'ADMINISTRATOR';
@@ -293,6 +369,24 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
                 </select>
               </div>
 
+              {/* Field: Kategori Anggaran */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-600 block flex items-center gap-1">
+                  <Tag className="h-3 w-3 text-indigo-500" />
+                  Kategori Pembayaran
+                </label>
+                <select
+                  value={kategori}
+                  onChange={(e) => setKategori(e.target.value)}
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 bg-white"
+                  id="select-payment-kategori"
+                >
+                  {categoryOptions.map((kat) => (
+                    <option key={kat} value={kat}>{kat}</option>
+                  ))}
+                </select>
+              </div>
+
               {/* Field 3: Jumlah Pembayaran */}
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-600 block">
@@ -380,35 +474,99 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
       {/* Filter and Table Card */}
       <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden" id="payments-list-card">
         {/* Controls */}
-        <div className="p-4 border-b border-slate-100 bg-slate-50/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="relative max-w-md w-full sm:w-72">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Cari rekanan atau catatan..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="text-xs w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500"
-              id="search-payments"
-            />
+        <div className="p-4 border-b border-slate-100 bg-slate-50/40 space-y-3">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            {/* Search */}
+            <div className="relative max-w-md w-full lg:w-72">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Cari rekanan, catatan, atau kategori..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="text-xs w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 font-medium"
+                id="search-payments"
+              />
+            </div>
+
+            {/* Status filters */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Status:</span>
+              {(['All', 'Draft', 'Aktif'] as const).map((status) => (
+                <button
+                  key={status}
+                  onClick={() => setStatusFilter(status)}
+                  className={`text-xs px-3 py-1.5 font-bold rounded-lg transition-all cursor-pointer ${
+                    statusFilter === status 
+                      ? 'bg-slate-800 text-white' 
+                      : 'bg-white text-slate-600 border border-slate-100 hover:bg-slate-50'
+                  }`}
+                  id={`btn-filter-payment-${status}`}
+                >
+                  {status === 'All' ? 'Semua' : status}
+                </button>
+              ))}
+            </div>
+
+            {/* Download Button */}
+            <button
+              onClick={handleDownloadCSV}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all self-stretch lg:self-auto cursor-pointer shadow-2xs"
+              id="btn-download-payments-csv"
+              type="button"
+            >
+              <FileDown className="h-4 w-4 shrink-0" />
+              Ekspor ke Excel / CSV
+            </button>
           </div>
 
-          <div className="flex items-center gap-1.5 self-start sm:self-auto">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">Filter status:</span>
-            {(['All', 'Draft', 'Aktif'] as const).map((status) => (
-              <button
-                key={status}
-                onClick={() => setStatusFilter(status)}
-                className={`text-xs px-3 py-1.5 font-bold rounded-lg transition-all cursor-pointer ${
-                  statusFilter === status 
-                    ? 'bg-slate-800 text-white' 
-                    : 'bg-white text-slate-600 border border-slate-100 hover:bg-slate-50'
-                }`}
-                id={`btn-filter-payment-${status}`}
+          {/* Sub-Filters: Category & Date Range */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2.5 border-t border-slate-100/50">
+            {/* Category selection */}
+            <div className="flex flex-col gap-1 text-left">
+              <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
+                <Tag className="h-3 w-3 text-indigo-500" />
+                Saring Kategori
+              </label>
+              <select
+                value={filterKategori}
+                onChange={(e) => setFilterKategori(e.target.value)}
+                className="text-xs p-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 font-semibold text-slate-700"
               >
-                {status === 'All' ? 'Semua' : status}
-              </button>
-            ))}
+                <option value="All">Semua Kategori</option>
+                {categoryOptions.map((kat) => (
+                  <option key={kat} value={kat}>{kat}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Start Date */}
+            <div className="flex flex-col gap-1 text-left">
+              <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
+                <Calendar className="h-3 w-3 text-slate-400" />
+                Awal Tanggal Bayar
+              </label>
+              <input
+                type="date"
+                value={filterStartDate}
+                onChange={(e) => setFilterStartDate(e.target.value)}
+                className="text-xs p-1.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 font-medium text-slate-700"
+              />
+            </div>
+
+            {/* End Date */}
+            <div className="flex flex-col gap-1 text-left">
+              <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
+                <Calendar className="h-3 w-3 text-slate-400" />
+                Akhir Tanggal Bayar
+              </label>
+              <input
+                type="date"
+                value={filterEndDate}
+                onChange={(e) => setFilterEndDate(e.target.value)}
+                className="text-xs p-1.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 font-medium text-slate-700"
+              />
+            </div>
           </div>
         </div>
 
@@ -447,7 +605,15 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
                         id={`payment-row-${p.id}`}
                       >
                         <td className="px-4 py-3.5 font-bold text-slate-800">
-                          {p.rekanan}
+                          <div>
+                            <span className="block">{p.rekanan}</span>
+                            {p.kategori && (
+                              <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold text-indigo-600 bg-indigo-50/70 px-2 py-0.5 rounded-md">
+                                <Tag className="h-2.5 w-2.5" />
+                                {p.kategori}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-3.5 whitespace-nowrap text-slate-500">
                           {p.tanggalBayar}
@@ -501,6 +667,7 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
                               <div className="space-y-2">
                                 <h4 className="font-bold text-indigo-950 uppercase tracking-wider text-[11px]">Detail Rencana Pembayaran</h4>
                                 <p><span className="font-bold text-slate-500">Catatan Peruntukan:</span> {p.catatan}</p>
+                                <p><span className="font-bold text-slate-500">Kategori Anggaran:</span> <span className="text-indigo-700 bg-indigo-50 font-extrabold px-2 py-0.5 rounded-md inline-flex items-center gap-1"><Tag className="h-2.5 w-2.5" />{p.kategori || 'Tanpa Kategori'}</span></p>
                                 <p><span className="font-bold text-slate-500">Metode Pembayaran:</span> {p.metodeBayar}</p>
                                 <p><span className="font-bold text-slate-500">Tanggal Ditenggat Tagih:</span> {p.tanggalDeadlineTagihan} (3 hari dari bayar)</p>
                               </div>

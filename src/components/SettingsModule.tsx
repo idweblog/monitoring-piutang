@@ -22,7 +22,8 @@ import {
   Wallet,
   Plus,
   Building,
-  Sparkles
+  Sparkles,
+  Tag
 } from 'lucide-react';
 import { CompanySettings, UserRole, InvoiceLog, AppUser, Payment, Invoice, AppNotification, CashAccount } from '../types';
 import { BrandingSettings } from './BrandingSettings';
@@ -56,7 +57,7 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
   notifications,
   onRestoreData,
 }) => {
-  const [activeTab, setActiveTab] = useState<'profile' | 'user-profile' | 'tax' | 'payment-methods' | 'partners' | 'tracking-positions' | 'users' | 'backup-restore' | 'notification' | 'system' | 'cash-accounts' | 'branding' | 'changelog'>('profile');
+  const [activeTab, setActiveTab ] = useState<'profile' | 'user-profile' | 'tax' | 'payment-methods' | 'partners' | 'categories' | 'tracking-positions' | 'users' | 'backup-restore' | 'notification' | 'system' | 'cash-accounts' | 'branding' | 'changelog'>('profile');
 
   // Non-blocking custom modal confirmation state
   const [showConfirmation, setShowConfirmation] = useState<{
@@ -103,6 +104,12 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
   const [newRekananInput, setNewRekananInput] = useState('');
   const [editingRekananIndex, setEditingRekananIndex] = useState<number | null>(null);
   const [editingRekananValue, setEditingRekananValue] = useState('');
+
+  // Category list states
+  const [kategoriList, setKategoriList] = useState<string[]>(settings.kategoriList || ['Pemasaran', 'SDM', 'Humas', 'Operasional', 'Logistik', 'Umum']);
+  const [newKategoriInput, setNewKategoriInput] = useState('');
+  const [editingKategoriIndex, setEditingKategoriIndex] = useState<number | null>(null);
+  const [editingKategoriValue, setEditingKategoriValue] = useState('');
 
   // Tracking position list states
   const [trackingPositionsList, setTrackingPositionsList] = useState<string[]>(settings.standardPositionsList || [
@@ -173,6 +180,7 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
     setJatuhTempoHariDefault(settings.jatuhTempoHariDefault ?? 30);
     setMetodePembayaranList(settings.metodePembayaranList || []);
     setRekananList(settings.rekananList || []);
+    setKategoriList(settings.kategoriList || ['Pemasaran', 'SDM', 'Humas', 'Operasional', 'Logistik', 'Umum']);
     setTrackingPositionsList(settings.standardPositionsList || [
       'Berkas Dikirim ke Biro Keuangan Customer',
       'Verifikasi Berkas Lengkap (Tanda Terima Diterbitkan)',
@@ -211,6 +219,7 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
       notifDeadlineH1,
       metodePembayaranList,
       rekananList,
+      kategoriList,
       jatuhTempoHariDefault: Number(jatuhTempoHariDefault),
       standardPositionsList: trackingPositionsList,
       agingBelumJatuhTempoLabel,
@@ -412,6 +421,50 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
     onUpdateSettings({
       ...settings,
       rekananList: updated,
+    });
+  };
+
+  const handleAddKategori = () => {
+    if (!newKategoriInput.trim()) return;
+    if (kategoriList.includes(newKategoriInput.trim())) {
+      alert('Kategori ini sudah terdaftar.');
+      return;
+    }
+    const updated = [...kategoriList, newKategoriInput.trim()];
+    setKategoriList(updated);
+    setNewKategoriInput('');
+    onUpdateSettings({
+      ...settings,
+      kategoriList: updated,
+    });
+  };
+
+  const handleDeleteKategori = (index: number) => {
+    setShowConfirmation({
+      title: 'Hapus Kategori',
+      message: 'Apakah Anda yakin ingin menghapus kategori ini? Kategori pada pembayaran yang sudah ada tidak akan terhapus otomatis, tetapi tidak akan direkomendasikan lagi untuk entri baru.',
+      isDanger: true,
+      confirmText: 'Ya, Hapus',
+      onConfirm: () => {
+        const updated = kategoriList.filter((_, i) => i !== index);
+        setKategoriList(updated);
+        onUpdateSettings({
+          ...settings,
+          kategoriList: updated,
+        });
+      }
+    });
+  };
+
+  const handleSaveEditKategori = (index: number) => {
+    if (!editingKategoriValue.trim()) return;
+    const updated = [...kategoriList];
+    updated[index] = editingKategoriValue.trim();
+    setKategoriList(updated);
+    setEditingKategoriIndex(null);
+    onUpdateSettings({
+      ...settings,
+      kategoriList: updated,
     });
   };
 
@@ -704,6 +757,20 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
           >
             <Briefcase className="h-4 w-4" />
             Manajemen Rekanan (Vendor)
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('categories')}
+            className={`w-full text-left text-xs font-bold p-3 rounded-lg flex items-center gap-2 transition-all cursor-pointer ${
+              activeTab === 'categories' 
+                ? 'bg-indigo-600 text-white' 
+                : 'text-slate-600 hover:bg-slate-50'
+            }`}
+            id="tab-categories"
+          >
+            <Tag className="h-4 w-4 text-purple-500" />
+            Manajemen Kategori
           </button>
 
           <button
@@ -1303,6 +1370,114 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
                                     onClick={() => handleDeleteRekanan(idx)}
                                     className="text-slate-400 hover:text-rose-600 p-1 rounded hover:bg-rose-50 transition-colors"
                                     title="Hapus rekanan ini"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SUB-MODULE: Categories Config */}
+            {activeTab === 'categories' && (
+              <div className="space-y-4 animate-fadeIn" id="content-categories">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                    <Tag className="h-4.5 w-4.5 text-indigo-600" />
+                    Manajemen Kategori
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">Mengatur daftar kategori untuk memisahkan dan membedakan jenis daftar pembayaran rekanan (cth: Pemasaran, SDM, Humas, Operasional, dll).</p>
+                </div>
+
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/60 space-y-4 font-sans">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      className="text-xs flex-1 p-2.5 border border-slate-200 rounded-lg bg-white"
+                      placeholder="Masukkan nama kategori baru (cth: Pemasaran, SDM, Humas)"
+                      value={newKategoriInput}
+                      onChange={(e) => setNewKategoriInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddKategori();
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddKategori}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2 text-center rounded-lg cursor-pointer transition-all shrink-0"
+                    >
+                      Tambah Kategori
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Daftar Kategori Terdaftar ({kategoriList.length})</span>
+                    {kategoriList.length === 0 ? (
+                      <p className="text-xs text-slate-400 italic">Belum ada kategori yang didaftarkan.</p>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {kategoriList.map((kat, idx) => (
+                          <div key={idx} className="flex justify-between items-center text-xs p-2.5 bg-white border border-slate-100 rounded-lg shadow-2xs">
+                            {editingKategoriIndex === idx ? (
+                              <div className="flex gap-2 w-full">
+                                <input
+                                  type="text"
+                                  className="text-xs flex-1 p-1.5 border border-slate-200 rounded bg-white"
+                                  value={editingKategoriValue}
+                                  onChange={(e) => setEditingKategoriValue(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      handleSaveEditKategori(idx);
+                                    }
+                                  }}
+                                  autoFocus
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleSaveEditKategori(idx)}
+                                  className="text-[10px] bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-2.5 py-1.5 rounded shrink-0 animate-pulse"
+                                >
+                                  Simpan
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingKategoriIndex(null)}
+                                  className="text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold px-2.5 py-1.5 rounded shrink-0"
+                                >
+                                  Batal
+                                </button>
+                              </div>
+                            ) : (
+                              <>
+                                <span className="font-bold text-slate-700 tracking-tight">{kat}</span>
+                                <div className="flex gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingKategoriIndex(idx);
+                                      setEditingKategoriValue(kat);
+                                    }}
+                                    className="text-slate-400 hover:text-indigo-600 p-1 rounded hover:bg-indigo-50 transition-colors"
+                                    title="Edit kategori ini"
+                                  >
+                                    <Edit className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteKategori(idx)}
+                                    className="text-slate-400 hover:text-rose-600 p-1 rounded hover:bg-rose-50 transition-colors"
+                                    title="Hapus kategori ini"
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
                                   </button>
@@ -2048,13 +2223,29 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
                 </div>
 
                 <div className="relative border-l-2 border-slate-100 pl-4 ml-2 space-y-6">
-                  {/* Version v1.6.1 */}
+                  {/* Version v1.7.0 */}
                   <div className="relative group">
                     <div className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-indigo-600 ring-4 ring-white" />
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-black text-slate-800">Versi v1.6.1 (Deteksi Firebase & Penyelarasan Self-Healing)</span>
+                        <span className="text-xs font-black text-slate-800">Versi v1.7.0 (Kategori, Saringan & Laporan Ekspor CSV)</span>
                         <span className="text-[9px] bg-indigo-50 text-indigo-600 font-bold px-1.5 py-0.5 rounded">Rilis Terbaru</span>
+                      </div>
+                      <span className="text-[10px] text-slate-400 block mt-0.5">8 Juni 2026</span>
+                      <ul className="list-disc pl-4 text-xs text-slate-600 mt-2 space-y-1">
+                        <li><strong>Manajemen Kategori Anggaran Kustom:</strong> Pihak Admin sekarang dapat menambah, menyunting, dan menghapus opsi kategori (seperti Pemasaran, SDM, Humas, Operasional, dll.) secara dinamis melalui menu Pengaturan baru "Manajemen Kategori", serta memilih kategori tersebut saat mendaftarkan rencana pembayaran baru.</li>
+                        <li><strong>Saringan Multi-Kriteria Tingkat Lanjut (Advanced Filters):</strong> Fitur penyaringan cerdas pada baris Daftar Rencana Pembayaran maupun Daftar Tagihan (Invoice / Piutang). Mempermudah pelacakan data berdasarkan kombinasi saringan kategori, rentang awal s.d akhir tanggal bayar/invoice, serta pencarian kata kunci yang dinamis.</li>
+                        <li><strong>Ekspor Laporan CSV Ter-filter (Unduh Excel):</strong> Menambahkan tombol "Ekspor ke Excel / CSV" di kedua modul pembayaran dan invoice. Format data yang diunduh secara cerdas menyesuaikan dengan hasil filter aktif saat ini, lengkap dengan penanganan karakter koma & kutip ganda (CSV-safe format).</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  {/* Version v1.6.1 */}
+                  <div className="relative group">
+                    <div className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-slate-200 ring-4 ring-white" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-slate-800">Versi v1.6.1 (Deteksi Firebase & Penyelarasan Self-Healing)</span>
                       </div>
                       <span className="text-[10px] text-slate-400 block mt-0.5">8 Juni 2026</span>
                       <ul className="list-disc pl-4 text-xs text-slate-600 mt-2 space-y-1">

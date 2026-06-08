@@ -52,6 +52,14 @@ export const DEFAULT_SETTINGS: CompanySettings = {
     { id: 'acc-bank-mandiri', nama: 'Bank Mandiri', tipe: 'Bank', nomorRekening: '132009871123' },
     { id: 'acc-bank-bni', nama: 'Bank BNI', tipe: 'Bank', nomorRekening: '0983127455' }
   ],
+  kategoriList: [
+    'Pemasaran',
+    'SDM',
+    'Humas',
+    'Operasional',
+    'Logistik',
+    'Umum'
+  ],
 };
 
 export const INITIAL_USERS: AppUser[] = [
@@ -73,6 +81,7 @@ export const INITIAL_PAYMENTS: Payment[] = [
     approvedBy: 'Direktur Utama',
     tanggalApprove: '2026-05-10',
     hasInvoice: true,
+    kategori: 'Humas',
   },
   {
     id: 'pay-2',
@@ -86,6 +95,7 @@ export const INITIAL_PAYMENTS: Payment[] = [
     approvedBy: 'Direktur Utama',
     tanggalApprove: '2026-05-16',
     hasInvoice: true,
+    kategori: 'SDM',
   },
   {
     id: 'pay-3',
@@ -99,6 +109,7 @@ export const INITIAL_PAYMENTS: Payment[] = [
     approvedBy: 'Direktur Utama',
     tanggalApprove: '2026-05-21',
     hasInvoice: true,
+    kategori: 'Logistik',
   },
   {
     id: 'pay-4',
@@ -112,6 +123,7 @@ export const INITIAL_PAYMENTS: Payment[] = [
     approvedBy: 'Direktur Utama',
     tanggalApprove: '2026-05-24',
     hasInvoice: false,
+    kategori: 'Pemasaran',
   },
   {
     id: 'pay-5',
@@ -125,6 +137,7 @@ export const INITIAL_PAYMENTS: Payment[] = [
     approvedBy: 'Direktur Utama',
     tanggalApprove: '2026-05-27',
     hasInvoice: false,
+    kategori: 'Operasional',
   },
   {
     id: 'pay-6',
@@ -136,6 +149,7 @@ export const INITIAL_PAYMENTS: Payment[] = [
     tanggalDeadlineTagihan: '2026-05-31',
     status: 'Draft', // Perlu approval Direktur
     hasInvoice: false,
+    kategori: 'Umum',
   },
 ];
 
