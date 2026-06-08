@@ -60,6 +60,12 @@ export default function App() {
     useFallbackRef.current = useLocalFallback;
   }, [useLocalFallback]);
 
+  const handleRetryFirebaseConnection = () => {
+    setFirebaseError(null);
+    setDbLoading(true);
+    setUseLocalFallback(false);
+  };
+
   // Navigation & Role states
   const [activeTab, setActiveTab] = useState<'dashboard' | 'payments' | 'invoices' | 'cash' | 'settings'>('dashboard');
   const [userRole, setUserRole] = useState<UserRole>('SUPERVISOR_KEUANGAN_UMUM');
@@ -638,19 +644,19 @@ export default function App() {
 
   // Real-time Firestore Subscriptions
   useEffect(() => {
-    if (!isFirebaseConfigured) {
+    if (!isFirebaseConfigured || useLocalFallback) {
       initLocalFallback();
       return;
     }
 
-    // Set a safety timeout: if Firestore takes more than 3.5 seconds to load/fire, automatically trigger LocalStorage fallback!
+    // Set a safety timeout: if Firestore takes more than 8 seconds to load/fire, automatically trigger LocalStorage fallback!
     const safetyTimeout = setTimeout(() => {
       if (dbLoading) {
         console.warn("Firestore subscription taking too long. Falling back to LocalStorage safety mode.");
-        setFirebaseError("Menghubungkan ke Firestore tertunda (Timeout 3.5 Detik). Silakan verifikasi jaringan Anda atau konfigurasi Aturan Firestore (Security Rules).");
+        setFirebaseError("Menghubungkan ke Firestore tertunda (Timeout 8 Detik). Database Anda mungkin belum dibuat atau aturan keamanan (Security Rules) memblokir koneksi ini.");
         initLocalFallback();
       }
-    }, 3500);
+    }, 8000);
 
     const handleSubError = (colName: string, err: any) => {
       console.warn(`Firestore subscription failed for '${colName}', falling back to LocalStorage:`, err);
@@ -779,7 +785,7 @@ export default function App() {
       unsubSettings();
       unsubCash();
     };
-  }, []);
+  }, [useLocalFallback]);
 
   // Sync current logged-in user changes if edited in system settings or if deleted
   useEffect(() => {
@@ -1699,29 +1705,6 @@ export default function App() {
                   </button>
                 </form>
 
-                <div className="relative my-4">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-slate-200/80" />
-                  </div>
-                  <div className="relative flex justify-center text-xs">
-                    <span className="bg-white px-2.5 text-[10px] text-slate-400 font-bold uppercase tracking-widest">Atau</span>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleGoogleLogin}
-                  className="w-full bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-800 border border-slate-200/70 font-bold text-xs py-3 rounded-xl transition-all cursor-pointer shadow-sm hover:shadow-md flex items-center justify-center gap-2 mb-4"
-                >
-                  <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24">
-                    <path fill="#EA4335" d="M12 5.04c1.66 0 3.2.57 4.38 1.69l3.27-3.27C17.67 1.47 15.01 1 12 1 7.24 1 3.21 3.74 1.25 7.73l3.85 2.99C6.01 7.4 8.78 5.04 12 5.04z" />
-                    <path fill="#4285F4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.35H12v4.46h6.46c-.28 1.47-1.11 2.72-2.35 3.56l3.64 2.82c2.13-1.96 3.74-4.85 3.74-8.49z" />
-                    <path fill="#FBBC05" d="M5.1 10.72c-.25-.73-.39-1.52-.39-2.34s.14-1.61.39-2.34L1.25 7.05C.45 8.64 0 10.42 0 12.27c0 1.95.49 3.82 1.35 5.46L5.1 14.81c-.25-.72-.39-1.52-.39-2.33s.14-1.61.39-2.34z" />
-                    <path fill="#34A853" d="M12 23c3.24 0 5.97-1.07 7.96-2.91l-3.64-2.82c-1.12.75-2.55 1.19-4.32 1.19-3.23 0-5.99-2.36-6.91-5.68l-3.85 2.99C3.21 19.86 7.24 23 12 23z" />
-                  </svg>
-                  Masuk dengan Akun Google
-                </button>
-
                 {!settings.disableDemoLogin && (
                   <>
                     <div className="relative my-4">
@@ -1817,24 +1800,60 @@ export default function App() {
                       </div>
 
                       {firebaseError ? (
-                        <div className="bg-rose-50 border border-rose-100 text-rose-700 p-2.5 rounded-lg text-[10px] leading-normal font-sans">
-                          <div className="font-bold mb-0.5">⚠️ Masalah Koneksi ke Cloud:</div>
-                          {firebaseError}
+                        <div className="bg-rose-50 border border-rose-100 text-rose-700/90 p-3.5 rounded-xl text-[10px] space-y-2 font-sans leading-relaxed">
+                          <div className="font-bold flex items-center gap-1.5 text-rose-800 text-[11px]">
+                            <span>⚠️ Kendala Hubungan Cloud:</span>
+                          </div>
+                          <p>{firebaseError}</p>
+                          <div className="pt-2 border-t border-rose-100/50 space-y-2">
+                            <p className="font-bold text-rose-850">Mengapa ini terjadi saat deploy mandiri?</p>
+                            <ol className="list-decimal pl-4.5 space-y-1.5 font-sans">
+                              <li>
+                                <strong>Firestore Belum Dibuat:</strong> Anda mungkin baru sekadar membuat <i>Proyek Firebase</i>, tapi belum mengaktifkan layanannya. Buka <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="font-bold underline text-rose-900 hover:text-indigo-600 transition-colors">Console Firebase</a>, masuk ke proyek <b>monitoring-piutang-1ff9c</b>, klik sidebar <b>Build ➔ Firestore Database</b>, dan buat basis datanya dengan menekan tombol <b>"Create Database"</b>.
+                              </li>
+                              <li>
+                                <strong>Lokasi/Regional Firestore Tidak Sesuai:</strong> Pastikan Anda menggunakan lokasi database default, atau setel variabel lingkungan <code className="bg-rose-100/80 px-1 py-0.5 rounded font-mono text-rose-900">VITE_FIREBASE_FIRESTORE_DATABASE_ID</code> jika menggunakan database kustom non-default di Netlify.
+                              </li>
+                              <li>
+                                <strong>Aturan Keamanan Memblokir (Security Rules):</strong> Di tab <b>Rules</b> pada Firestore Database, pastikan aturan Anda mengizinkan akses baca-tulis publik untuk pengujian:
+                                <pre className="bg-slate-900/90 text-slate-100 p-2 rounded-lg text-[9px] font-mono mt-1 font-semibold overflow-x-auto select-all">
+{`rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}`}
+                                </pre>
+                              </li>
+                            </ol>
+                          </div>
                         </div>
                       ) : (
                         !useLocalFallback && (
-                          <div className="bg-emerald-50 text-emerald-700 p-2 rounded-lg text-[10px] leading-normal font-sans">
+                          <div className="bg-emerald-50 text-emerald-700 p-2.5 rounded-xl text-[10px] leading-normal font-sans">
                             🎉 Koneksi sinkronisasi ke Firebase Firestore berhasil terhubung! Data Anda aman di Cloud.
                           </div>
                         )
                       )}
 
                       {useLocalFallback && isFirebaseConfigured && (
-                        <div className="text-[10px] text-slate-500 leading-relaxed italic bg-white p-2.5 rounded-lg border border-slate-150 font-sans">
-                          💡 <strong>Petunjuk Penting Netlify:</strong> Jika variabel lingkungan di atas bernilai <code className="bg-slate-100 p-0.5 px-1 rounded font-mono text-slate-700">Kosong/Tidak Terbaca</code> padahal Anda telah mengisinya di dashboard Netlify, itu karena Vite membutuhkan variabel lingkungan saat proses build berlangsung.
-                          <br />
-                          <br />
-                          <strong>Langkah Wajib:</strong> Anda Harus memicu pembangunan ulang sistem (**Trigger Deploy ➔ Deploy site**) di web Netlify setelah menyimpan variabel tersebut agar bundler Vite memproses ulang dan membilas / mengompilasi variabel lingkungan tersebut ke dalam file statis.
+                        <div className="space-y-3 pt-1">
+                          <button
+                            type="button"
+                            onClick={handleRetryFirebaseConnection}
+                            className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 font-sans font-black text-white rounded-xl text-[10px] tracking-wider uppercase text-center shadow-lg shadow-indigo-100 hover:shadow-indigo-200 transition-all transform hover:-translate-y-0.5 cursor-pointer flex items-center justify-center gap-1.5"
+                          >
+                            🔄 Coba Sinkronisasi Ulang ke Firebase
+                          </button>
+
+                          <div className="text-[10px] text-slate-500 leading-relaxed bg-white p-2.5 rounded-lg border border-slate-150 font-sans">
+                            💡 <strong>Petunjuk Penting Netlify Env:</strong> Jika variabel lingkungan di atas bernilai <code className="bg-slate-100 p-0.5 px-1 rounded font-mono text-slate-700">Kosong/Tidak Terbaca</code> padahal Anda telah mengisinya di dashboard Netlify, itu karena Vite membutuhkan variabel lingkungan saat proses build berlangsung.
+                            <br />
+                            <br />
+                            <strong>Langkahnya:</strong> Anda wajib memicu bangun ulang sistem (**Trigger Deploy ➔ Deploy site**) di web Netlify setelah menyimpan variabel lingkungan tersebut agar bundler Vite memproses ulang dan membilas variabel lingkungan tersebut ke dalam file statis.
+                          </div>
                         </div>
                       )}
                     </div>
