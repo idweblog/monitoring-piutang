@@ -1285,7 +1285,7 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
                               </div>
                             ) : (
                               <>
-                                <span className="font-bold text-slate-700 uppercase tracking-tight">{r}</span>
+                                <span className="font-bold text-slate-700 tracking-tight">{r}</span>
                                 <div className="flex gap-1.5">
                                   <button
                                     type="button"
