@@ -22,6 +22,7 @@ export interface Payment {
 export interface Invoice {
   id: string;
   paymentId: string;
+  paymentIds?: string[];
   rekanan: string;
   jumlahBayar: number;
   customerDebitur: string;

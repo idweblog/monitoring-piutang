@@ -1021,8 +1021,13 @@ export default function App() {
       id: invoiceId,
     };
 
-    const relatedPayment = payments.find(p => p.id === newInv.paymentId);
-    const updatedPayment = relatedPayment ? { ...relatedPayment, hasInvoice: true } : null;
+    const paymentIdsToMark = newInv.paymentIds && newInv.paymentIds.length > 0
+      ? newInv.paymentIds
+      : (newInv.paymentId ? [newInv.paymentId] : []);
+
+    const updatedPayments = payments
+      .filter(p => paymentIdsToMark.includes(p.id))
+      .map(p => ({ ...p, hasInvoice: true }));
 
     const initialLog: InvoiceLog = {
       id: `log-${Date.now()}`,
@@ -1044,8 +1049,8 @@ export default function App() {
 
     try {
       await persistSetDoc('invoices', invoiceId, freshInvoice);
-      if (updatedPayment) {
-        await persistSetDoc('payments', updatedPayment.id, updatedPayment);
+      for (const pUp of updatedPayments) {
+        await persistSetDoc('payments', pUp.id, pUp);
       }
       await persistSetDoc('logs', initialLog.id, initialLog);
       await persistSetDoc('notifications', newNotif.id, newNotif);
@@ -1115,7 +1120,10 @@ export default function App() {
       await persistSetDoc('notifications', newNotif.id, newNotif);
 
       // --- AUTOMATED COMPANY CASH BALANCE INCREMENTation ---
-      const relatedPayment = payments.find(p => p.id === relatedInv.paymentId);
+      const paymentIdToQuery = (relatedInv.paymentIds && relatedInv.paymentIds.length > 0)
+        ? relatedInv.paymentIds[0]
+        : relatedInv.paymentId;
+      const relatedPayment = payments.find(p => p.id === paymentIdToQuery);
       const metodeBayar = relatedPayment?.metodeBayar || 'Tunai';
 
       // Match cash account ID based on invoice's payment method

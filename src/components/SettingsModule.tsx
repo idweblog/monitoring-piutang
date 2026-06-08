@@ -2048,13 +2048,29 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
                 </div>
 
                 <div className="relative border-l-2 border-slate-100 pl-4 ml-2 space-y-6">
-                  {/* Version v1.5.0 */}
+                  {/* Version v1.6.0 */}
                   <div className="relative group">
                     <div className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-indigo-600 ring-4 ring-white" />
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-black text-slate-800">Versi v1.5.0 (Sinkronisasi Kas & Rekening)</span>
+                        <span className="text-xs font-black text-slate-800">Versi v1.6.0 (Multi-Payment Invoicing)</span>
                         <span className="text-[9px] bg-indigo-50 text-indigo-600 font-bold px-1.5 py-0.5 rounded">Rilis Terbaru</span>
+                      </div>
+                      <span className="text-[10px] text-slate-400 block mt-0.5">8 Juni 2026</span>
+                      <ul className="list-disc pl-4 text-xs text-slate-600 mt-2 space-y-1">
+                        <li><strong>Dukungan Pembuatan Tagihan Multi-Reference (Multi List):</strong> Sekarang admin/staf dapat menyeleksi beberapa (multi-select) rencana pembayaran rekanan sekaligus untuk digabungkan menjadi satu tagihan (invoice) tunggal kepada customer.</li>
+                        <li><strong>Kalkulasi &amp; Rangkuman Otomatis:</strong> Sistem secara otomatis menjumlahkan pengeluaran riil rekanan yang digabung, memberikan visualisasi ringkas daftar plan terkait, serta menghitung estimasi keuntungan kotor (margin) berdasarkan gabungan modal tersebut secara real-time.</li>
+                        <li><strong>Proporsionalitas Rincian Invoice:</strong> Jika invoice terhubung ke beberapa rencana pembayaran rekanan, struk cetak / pratinjau invoice akan membagi rincian tagihan secara proporsional berdasarkan porsi modal masing-masing vendor pendukung secara otomatis.</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  {/* Version v1.5.0 */}
+                  <div className="relative group shadow-none">
+                    <div className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-slate-200 ring-4 ring-white" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-slate-800">Versi v1.5.0 (Sinkronisasi Kas & Rekening)</span>
                       </div>
                       <span className="text-[10px] text-slate-400 block mt-0.5">2 Juni 2026</span>
                       <ul className="list-disc pl-4 text-xs text-slate-600 mt-2 space-y-1">

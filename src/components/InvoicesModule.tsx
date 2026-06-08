@@ -54,6 +54,7 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
   const [statusFilter, setStatusFilter] = useState<'All' | 'Belum Lunas' | 'Lunas'>('All');
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [selectedPayments, setSelectedPayments] = useState<Payment[]>([]);
 
   // Helper date function
   const addDaysStr = (dateStr: string, days: number): string => {
@@ -138,14 +139,29 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
     }
   }, [isAddingNew, tanggalTagihan, invoices.length, settings.formatNomorTagihan]);
 
-  // Trigger auto payment prefill on selecting a payment
-  const handlePaymentSelect = (paymentId: string) => {
-    const pay = payments.find(p => p.id === paymentId) || null;
-    setSelectedPayment(pay);
-    if (pay) {
-      const suggested = Math.round(pay.jumlahBayar * 1.2);
+  const handleTogglePaymentSelection = (payment: Payment) => {
+    let nextPayments = [...selectedPayments];
+    const index = nextPayments.findIndex(p => p.id === payment.id);
+    if (index >= 0) {
+      nextPayments.splice(index, 1);
+    } else {
+      nextPayments.push(payment);
+    }
+    setSelectedPayments(nextPayments);
+    
+    // Sync single selectedPayment state with first item for backward-compatibility & info blocks
+    const firstPay = nextPayments[0] || null;
+    setSelectedPayment(firstPay);
+
+    if (nextPayments.length > 0) {
+      // Sum the total cost of all selected payments (nilai modal total)
+      const totalCost = nextPayments.reduce((sum, p) => sum + p.jumlahBayar, 0);
+      const suggested = Math.round(totalCost * 1.2);
       setJumlahTagihKotor(suggested);
       setJumlahTagihKotorDisplay(suggested.toLocaleString('id-ID'));
+    } else {
+      setJumlahTagihKotor('');
+      setJumlahTagihKotorDisplay('');
     }
   };
 
@@ -165,8 +181,8 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
     e.preventDefault();
     setFormError('');
 
-    if (!selectedPayment) {
-      setFormError('Silakan pilih daftar pembayaran rekanan asal terlebih dahulu');
+    if (selectedPayments.length === 0) {
+      setFormError('Silakan pilih minimal satu daftar pembayaran rekanan asal terlebih dahulu');
       return;
     }
     if (!customerDebitur.trim()) {
@@ -187,10 +203,15 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
     const pphNominal = Math.round((kotor * pphTarif) / 100);
     const totalTagihan = kotor + ppnNominal - pphNominal;
 
+    // Aggregate unique rekanan list
+    const uniqueRekanan = Array.from(new Set(selectedPayments.map(p => p.rekanan))).join(', ');
+    const totalModal = selectedPayments.reduce((sum, p) => sum + p.jumlahBayar, 0);
+
     const newInvoiceObj: Omit<Invoice, 'id'> = {
-      paymentId: selectedPayment.id,
-      rekanan: selectedPayment.rekanan,
-      jumlahBayar: selectedPayment.jumlahBayar,
+      paymentId: selectedPayments[0].id, // first ID for fallback compatibility
+      paymentIds: selectedPayments.map(p => p.id), // full group of linked payments
+      rekanan: uniqueRekanan,
+      jumlahBayar: totalModal, // combined cost
       customerDebitur,
       nomorTagihan,
       tanggalTagihan,
@@ -209,6 +230,7 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
     // Reset Form
     setIsAddingNew(false);
     setSelectedPayment(null);
+    setSelectedPayments([]);
     setCustomerDebitur('');
     setJumlahTagihKotor('');
     setJumlahTagihKotorDisplay('');
@@ -305,6 +327,7 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
               onClick={() => {
                 setIsAddingNew(false);
                 setSelectedPayment(null);
+                setSelectedPayments([]);
                 setFormError('');
               }}
               className="text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-50 rounded"
@@ -327,44 +350,79 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
               {/* Step 1: Tarik Rencana Pembayaran */}
               <div className="space-y-1 md:col-span-2">
                 <label className="text-xs font-bold text-indigo-900 block">
-                  1. Pilih Referensi Pembayaran Rekanan (Yang Telah Diapprove Direktur) <span className="text-rose-500">*</span>
+                  1. Pilih Satu atau Beberapa Referensi Pembayaran (Yang Telah Diapprove Direktur) <span className="text-rose-500">*</span>
                 </label>
-                <select
-                  onChange={(e) => handlePaymentSelect(e.target.value)}
-                  className="w-full text-xs p-2.5 bg-indigo-50/30 border border-indigo-100 rounded-lg focus:outline-none focus:border-indigo-500 bg-white font-semibold text-slate-800"
-                  id="select-payment-source"
-                  defaultValue=""
-                >
-                  <option value="" disabled>-- Pilih data pembayaran yang belum ditagih --</option>
-                  {eligiblePayments.map(p => (
-                    <option key={p.id} value={p.id}>
-                      {p.rekanan} — Rp {p.jumlahBayar.toLocaleString('id-ID')} ({p.catatan.slice(0, 40)}...)
-                    </option>
-                  ))}
-                  {eligiblePayments.length === 0 && (
-                    <option disabled>Tidak ada pembayaran aktif yang belum memiliki tagihan</option>
-                  )}
-                </select>
+                
+                {eligiblePayments.length === 0 ? (
+                  <div className="p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg text-xs font-semibold">
+                    Tidak ada referensi pembayaran aktif yang siap ditagih (hasInvoice = false).
+                  </div>
+                ) : (
+                  <div className="border border-slate-200 rounded-lg overflow-hidden bg-slate-50/40">
+                    <div className="p-2 border-b border-slate-200 bg-white text-[10px] text-slate-500 font-bold uppercase tracking-wider flex justify-between items-center">
+                      <span>Daftar Rencana Pembayaran Tersedia</span>
+                      <span className="text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full font-extrabold">{selectedPayments.length} Terpilih</span>
+                    </div>
+                    <div className="max-h-56 overflow-y-auto divide-y divide-slate-100 bg-white">
+                      {eligiblePayments.map((p) => {
+                        const isChecked = selectedPayments.some(sp => sp.id === p.id);
+                        return (
+                          <div 
+                            key={p.id} 
+                            onClick={() => handleTogglePaymentSelection(p)}
+                            className={`p-2.5 flex items-start gap-3 text-xs cursor-pointer hover:bg-indigo-50/30 transition-colors ${
+                              isChecked ? 'bg-indigo-50/20 font-semibold' : ''
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => {}} // handled by click parent
+                              className="mt-0.5 h-3.5 w-3.5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex justify-between font-bold text-slate-800">
+                                <span className="truncate">{p.rekanan}</span>
+                                <span className="text-indigo-950 ml-2 shrink-0">{formatRupiah(p.jumlahBayar)}</span>
+                              </div>
+                              <p className="text-[10px] text-slate-500 truncate mt-0.5" title={p.catatan}>
+                                {p.catatan}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
                 <p className="text-[10px] text-slate-400 font-medium">
-                  Sistem otomatis mengikat nomor invoice dengan data pengeluaran kas di atas.
+                  Sistem otomatis mengikat nomor invoice dengan seluruh daftar rencana pembayaran yang dicentang di atas.
                 </p>
               </div>
 
-              {selectedPayment && (
+              {selectedPayments.length > 0 && selectedPayment && (
                 <React.Fragment>
                   {/* Step 1.1 Autofilled box info */}
-                  <div className="md:col-span-2 bg-slate-50 p-3 rounded-lg border border-slate-200 grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
-                    <div>
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Nilai Modal Perusahaan</span>
-                      <strong className="text-slate-800">{formatRupiah(selectedPayment.jumlahBayar)}</strong>
+                  <div className="md:col-span-2 bg-slate-50 p-3.5 rounded-lg border border-slate-200 space-y-3.5 text-xs animate-fadeIn">
+                    <div className="flex justify-between items-center border-b border-slate-200 pb-2">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">Rangkuman Pembayaran Terpilih ({selectedPayments.length})</span>
+                      <span className="text-[11px] font-extrabold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full">
+                        Total Modal: {formatRupiah(selectedPayments.reduce((acc, p) => acc + p.jumlahBayar, 0))}
+                      </span>
                     </div>
-                    <div>
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Peruntukan Pembayaran</span>
-                      <p className="text-slate-600 font-medium truncate" title={selectedPayment.catatan}>{selectedPayment.catatan}</p>
-                    </div>
-                    <div>
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Vendor Rekanan</span>
-                      <strong className="text-slate-800">{selectedPayment.rekanan}</strong>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-36 overflow-y-auto">
+                      {selectedPayments.map((p, idx) => (
+                        <div key={p.id} className="bg-white p-2.5 rounded-lg border border-slate-200 flex flex-col justify-between select-none">
+                          <div className="flex justify-between items-start gap-2">
+                            <span className="font-bold text-slate-800 leading-tight block">{idx + 1}. {p.rekanan}</span>
+                            <strong className="text-[11px] text-slate-900 shrink-0">{formatRupiah(p.jumlahBayar)}</strong>
+                          </div>
+                          <p className="text-[10px] text-slate-500 mt-1 line-clamp-2 italic" title={p.catatan}>
+                            "{p.catatan}"
+                          </p>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
@@ -436,11 +494,17 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
                         id="input-invoice-kotor"
                       />
                     </div>
-                    {jumlahTagihKotor && Number(jumlahTagihKotor) <= selectedPayment.jumlahBayar && (
-                      <span className="text-[10px] text-amber-600 font-bold block bg-amber-50 p-1 px-2 rounded mt-1">
-                        ⚠️ Peringatan: Nilai tagihan kotor lebih kecil/sama dengan nilai pengeluaran kas supplier ({formatRupiah(selectedPayment.jumlahBayar)}). Potensi margin laba akan negatif.
-                      </span>
-                    )}
+                    {(() => {
+                      const totalModalCost = selectedPayments.reduce((acc, p) => acc + p.jumlahBayar, 0);
+                      if (jumlahTagihKotor && Number(jumlahTagihKotor) <= totalModalCost) {
+                        return (
+                          <span className="text-[10px] text-amber-600 font-bold block bg-amber-50 p-2 rounded-lg mt-1 border border-amber-100">
+                            ⚠️ Peringatan: Nilai tagihan kotor ({formatRupiah(Number(jumlahTagihKotor))}) lebih kecil/sama dengan nilai total pengeluaran kas supplier ({formatRupiah(totalModalCost)}). Potensi margin laba akan negatif atau nihil.
+                          </span>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
 
                   {/* Step 7: Pajak configuration */}
@@ -489,7 +553,7 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
                         <div>
                           <span className="text-[9px] text-emerald-600 uppercase font-bold block text-left md:text-right">Potensi Margin Laba Kotor</span>
                           <span className="text-xs font-extrabold text-emerald-700 block text-left md:text-right">
-                            {formatRupiah(Number(jumlahTagihKotor) - selectedPayment.jumlahBayar)}
+                            {formatRupiah(Number(jumlahTagihKotor) - selectedPayments.reduce((acc, p) => acc + p.jumlahBayar, 0))}
                           </span>
                         </div>
                       </div>
@@ -502,6 +566,7 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
                       onClick={() => {
                         setIsAddingNew(false);
                         setSelectedPayment(null);
+                        setSelectedPayments([]);
                       }}
                       className="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs px-4 py-2 rounded-lg cursor-pointer transition-colors"
                     >
@@ -658,6 +723,43 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
                       
                       {/* Financial Detail Breakdown */}
                       <div className="space-y-4">
+                        {/* Linked Payments Breakdown */}
+                        {(() => {
+                          const linkedIds = inv.paymentIds || [inv.paymentId].filter(Boolean);
+                          if (linkedIds.length === 0) return null;
+                          return (
+                            <div className="bg-slate-50/70 rounded-xl p-4 border border-slate-200 space-y-2 text-xs">
+                              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                                <CreditCard className="h-4 w-4 text-indigo-600" />
+                                Daftar Rencana Pembayaran Terkait ({linkedIds.length})
+                              </h4>
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-left text-xs">
+                                  <thead>
+                                    <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+                                      <th className="py-1">Vendor / Rekanan</th>
+                                      <th className="py-1 text-right">Pembayaran (Modal)</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-slate-100">
+                                    {payments.filter(p => linkedIds.includes(p.id)).map(p => (
+                                      <tr key={p.id} className="text-slate-700">
+                                        <td className="py-1.5 font-semibold">
+                                          <span>{p.rekanan}</span>
+                                          <span className="block text-[9px] text-slate-400 font-medium truncate max-w-[200px]" title={p.catatan}>
+                                            {p.catatan}
+                                          </span>
+                                        </td>
+                                        <td className="py-1.5 text-right font-bold text-slate-800">{formatRupiah(p.jumlahBayar)}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          );
+                        })()}
+
                         <div className="bg-slate-50/70 rounded-xl p-4 border border-slate-200 space-y-3">
                           <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1">
                             <TrendingUp className="h-4 w-4 text-emerald-600" />
@@ -919,13 +1021,37 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border-b border-slate-100 font-medium text-slate-700">
-                      <td className="p-2">
-                        Pembayaran kegiatan, penyalinan tagihan untuk porsi modal: 
-                        <span className="italic block text-[10px] text-slate-400 mt-0.5">Asal vendor: {previewInvoice.rekanan}</span>
-                      </td>
-                      <td className="p-2 text-right font-bold text-slate-800">{formatRupiah(previewInvoice.jumlahTagihKotor)}</td>
-                    </tr>
+                    {(() => {
+                      const linkedIds = previewInvoice.paymentIds || [previewInvoice.paymentId].filter(Boolean);
+                      const linkedPayments = payments.filter(p => linkedIds.includes(p.id));
+                      
+                      if (linkedPayments.length > 1) {
+                        const totalBase = linkedPayments.reduce((acc, p) => acc + p.jumlahBayar, 0);
+                        return linkedPayments.map((p, idx) => {
+                          const ratio = totalBase > 0 ? (p.jumlahBayar / totalBase) : (1 / linkedPayments.length);
+                          const proratedKotor = Math.round(previewInvoice.jumlahTagihKotor * ratio);
+                          return (
+                            <tr key={p.id} className="border-b border-slate-100 font-medium text-slate-700 text-[11px]">
+                              <td className="p-2">
+                                <span className="font-bold text-indigo-950 block">{idx + 1}. Layanan Vendor: {p.rekanan}</span>
+                                <span className="text-[10px] text-slate-500 block">Keterangan: {p.catatan} (Modal: {formatRupiah(p.jumlahBayar)})</span>
+                              </td>
+                              <td className="p-2 text-right font-bold text-slate-800">{formatRupiah(proratedKotor)}</td>
+                            </tr>
+                          );
+                        });
+                      } else {
+                        return (
+                          <tr className="border-b border-slate-100 font-medium text-slate-700">
+                            <td className="p-2">
+                              Pembayaran kegiatan, penyalinan tagihan untuk porsi modal ke customer: 
+                              <span className="italic block text-[10px] text-slate-400 mt-0.5">Asal vendor: {previewInvoice.rekanan}</span>
+                            </td>
+                            <td className="p-2 text-right font-bold text-slate-800">{formatRupiah(previewInvoice.jumlahTagihKotor)}</td>
+                          </tr>
+                        );
+                      }
+                    })()}
                   </tbody>
                 </table>
               </div>
