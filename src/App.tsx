@@ -36,7 +36,7 @@ import {
   INITIAL_CASH_BALANCES
 } from './mockData';
 
-import { db, auth, handleFirestoreError, OperationType } from './firebase';
+import { db, auth, handleFirestoreError, OperationType, isFirebaseConfigured } from './firebase';
 import { collection, doc, setDoc, deleteDoc, onSnapshot, getDocs } from 'firebase/firestore';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 
@@ -51,21 +51,10 @@ import { CashModule } from './components/CashModule';
 export default function App() {
   const isResettingRef = React.useRef(false);
 
-  // Auto-detection of Firebase project configuration
-  const isFirebaseConfigured = (() => {
-    try {
-      const configFiles = (import.meta as any).glob('../firebase-applet-config.json', { eager: true });
-      const configKeys = Object.keys(configFiles);
-      const firebaseConfigJson: any = configKeys.length > 0 ? (configFiles[configKeys[0]] as any).default : {};
-      const projId = import.meta.env.VITE_FIREBASE_PROJECT_ID || firebaseConfigJson.projectId || '';
-      return projId !== '' && projId !== 'your-project-id';
-    } catch (e) {
-      return false;
-    }
-  })();
-
   const [useLocalFallback, setUseLocalFallback] = useState(!isFirebaseConfigured);
   const useFallbackRef = React.useRef(!isFirebaseConfigured);
+  const [firebaseError, setFirebaseError] = useState<string | null>(null);
+  const [showDbDiagnostics, setShowDbDiagnostics] = useState(false);
 
   useEffect(() => {
     useFallbackRef.current = useLocalFallback;
@@ -658,12 +647,14 @@ export default function App() {
     const safetyTimeout = setTimeout(() => {
       if (dbLoading) {
         console.warn("Firestore subscription taking too long. Falling back to LocalStorage safety mode.");
+        setFirebaseError("Menghubungkan ke Firestore tertunda (Timeout 3.5 Detik). Silakan verifikasi jaringan Anda atau konfigurasi Aturan Firestore (Security Rules).");
         initLocalFallback();
       }
     }, 3500);
 
     const handleSubError = (colName: string, err: any) => {
       console.warn(`Firestore subscription failed for '${colName}', falling back to LocalStorage:`, err);
+      setFirebaseError(`Gagal membaca koleksi Firestore '${colName}': ${err instanceof Error ? err.message : String(err)}`);
       initLocalFallback();
     };
 
@@ -763,6 +754,7 @@ export default function App() {
       setCashBalances(cashList);
       clearTimeout(safetyTimeout); // Clear the safety loading fallback timeout!
       setDbLoading(false); // Make sure loading is disabled after settings and cash are subscribed!
+      setFirebaseError(null); // Clear errors since connection was successful!
     }, (err) => handleSubError('cashBalances', err));
 
     // Load active logged-in session representation (survives refreshes only)
@@ -1777,6 +1769,77 @@ export default function App() {
                     </div>
                   </>
                 )}
+
+                {/* Database Connection Diagnostic Panel */}
+                <div className="mt-5 border-t border-slate-100 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowDbDiagnostics(!showDbDiagnostics)}
+                    className="w-full flex items-center justify-between text-[10px] uppercase font-black tracking-wider text-slate-400 hover:text-indigo-600 transition-colors p-1.5 rounded-lg hover:bg-slate-50 cursor-pointer"
+                  >
+                    <span className="flex items-center gap-1.5 font-sans">
+                      🛠️ Status &amp; Diagnostik Database
+                    </span>
+                    <span className="font-mono text-[9px]">
+                      {showDbDiagnostics ? '[ SEMBUNYIKAN ]' : '[ DATA DIAGNOSTIK ]'}
+                    </span>
+                  </button>
+
+                  {showDbDiagnostics && (
+                    <div className="mt-3 p-3.5 bg-slate-50 border border-slate-200/50 rounded-xl text-[11px] text-slate-650 space-y-2.5 animate-fadeIn">
+                      <div className="flex items-center justify-between font-bold">
+                        <span>Mode Penyimpanan:</span>
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black ${useLocalFallback ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                          <span className={`h-1 w-1 rounded-full ${useLocalFallback ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'}`} />
+                          {useLocalFallback ? 'LocalStorage Fallback (Offline)' : 'Firebase Firestore (Live / Cloud)'}
+                        </span>
+                      </div>
+
+                      <div className="space-y-1.5 bg-white p-2.5 rounded-lg border border-slate-200 font-mono text-[9px] leading-relaxed">
+                        <div className="flex justify-between border-b border-slate-50 pb-1">
+                          <span className="text-slate-400">PROJECT ID:</span>
+                          <span className="font-bold text-slate-800 break-all text-right select-all pl-2">
+                            {(import.meta as any).env.VITE_FIREBASE_PROJECT_ID || '(Kosong / Belum terdeteksi)'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between border-b border-slate-50 py-1">
+                          <span className="text-slate-400">API KEY:</span>
+                          <span className="font-bold text-slate-800 select-all">
+                            {(import.meta as any).env.VITE_FIREBASE_API_KEY ? '✅ Tersedia (Terbaca)' : '❌ Kosong / Tidak Terbaca'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between py-0.5">
+                          <span className="text-slate-400">DETEKSI PROYEK:</span>
+                          <span className={`font-black ${isFirebaseConfigured ? 'text-emerald-600' : 'text-amber-600'}`}>
+                            {isFirebaseConfigured ? '✅ TERASOSIASI DENGAN FIREBASE' : '❌ TIDAK TERKONEKSI'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {firebaseError ? (
+                        <div className="bg-rose-50 border border-rose-100 text-rose-700 p-2.5 rounded-lg text-[10px] leading-normal font-sans">
+                          <div className="font-bold mb-0.5">⚠️ Masalah Koneksi ke Cloud:</div>
+                          {firebaseError}
+                        </div>
+                      ) : (
+                        !useLocalFallback && (
+                          <div className="bg-emerald-50 text-emerald-700 p-2 rounded-lg text-[10px] leading-normal font-sans">
+                            🎉 Koneksi sinkronisasi ke Firebase Firestore berhasil terhubung! Data Anda aman di Cloud.
+                          </div>
+                        )
+                      )}
+
+                      {useLocalFallback && isFirebaseConfigured && (
+                        <div className="text-[10px] text-slate-500 leading-relaxed italic bg-white p-2.5 rounded-lg border border-slate-150 font-sans">
+                          💡 <strong>Petunjuk Penting Netlify:</strong> Jika variabel lingkungan di atas bernilai <code className="bg-slate-100 p-0.5 px-1 rounded font-mono text-slate-700">Kosong/Tidak Terbaca</code> padahal Anda telah mengisinya di dashboard Netlify, itu karena Vite membutuhkan variabel lingkungan saat proses build berlangsung.
+                          <br />
+                          <br />
+                          <strong>Langkah Wajib:</strong> Anda Harus memicu pembangunan ulang sistem (**Trigger Deploy ➔ Deploy site**) di web Netlify setelah menyimpan variabel tersebut agar bundler Vite memproses ulang dan membilas / mengompilasi variabel lingkungan tersebut ke dalam file statis.
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )
@@ -1803,7 +1866,13 @@ export default function App() {
                     <h1 className="text-sm font-black text-slate-800 tracking-tight leading-none flex items-center gap-1.5">
                       {settings.namaPerusahaan}
                     </h1>
-                    <p className="text-[10px] text-slate-500 font-bold uppercase mt-0.5">Sistem Monitoring Piutang</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-[10px] text-slate-500 font-bold uppercase">Sistem Monitoring Piutang</p>
+                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${useLocalFallback ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-emerald-50 text-emerald-800 border border-emerald-200'}`}>
+                        <span className={`h-1 w-1 rounded-full ${useLocalFallback ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'}`} />
+                        {useLocalFallback ? '💾 Local' : '🔥 Firebase'}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
