@@ -85,6 +85,10 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
   const [pphTarif, setPphTarif] = useState(settings.pphDefault);
   const [formError, setFormError] = useState('');
 
+  // Custom Payment Selection Search states
+  const [paymentSelectionSearch, setPaymentSelectionSearch] = useState('');
+  const [showPaymentSelectionSuggestions, setShowPaymentSelectionSuggestions] = useState(false);
+
   // Log tracking form states
   const [expandedInvoiceId, setExpandedInvoiceId] = useState<string | null>(null);
   const [logTanggal, setLogTanggal] = useState('2026-05-28');
@@ -243,6 +247,8 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
     setJumlahTagihKotorDisplay('');
     setPpnTarif(settings.ppnDefault);
     setPphTarif(settings.pphDefault);
+    setPaymentSelectionSearch('');
+    setShowPaymentSelectionSuggestions(false);
   };
 
   // Handle manual additions to logs
@@ -294,7 +300,32 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
   ];
 
   // Filters
-  const eligiblePayments = payments.filter(p => p.status === 'Aktif' && !p.hasInvoice);
+  // Sort payments: oldest (paling lama) first by tanggalBayar ascending
+  const eligiblePayments = [...payments]
+    .filter(p => p.status === 'Aktif' && !p.hasInvoice)
+    .sort((a, b) => a.tanggalBayar.localeCompare(b.tanggalBayar));
+
+  const suggestedPayments = eligiblePayments.filter(p => {
+    const term = paymentSelectionSearch.toLowerCase().trim();
+    if (!term) return false;
+    return (
+      p.rekanan.toLowerCase().includes(term) ||
+      (p.catatan || '').toLowerCase().includes(term) ||
+      (p.kategori || '').toLowerCase().includes(term) ||
+      p.tanggalBayar.includes(term)
+    );
+  });
+
+  const displayedPayments = eligiblePayments.filter(p => {
+    const term = paymentSelectionSearch.toLowerCase().trim();
+    if (!term) return true;
+    return (
+      p.rekanan.toLowerCase().includes(term) ||
+      (p.catatan || '').toLowerCase().includes(term) ||
+      (p.kategori || '').toLowerCase().includes(term) ||
+      p.tanggalBayar.includes(term)
+    );
+  });
   const filteredInvoices = invoices.filter(inv => {
     const normalizedKeyword = searchTerm.toLowerCase();
 
@@ -379,7 +410,7 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
       {/* Alert Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
         <div>
-          <h2 className="text-base font-bold text-slate-800">Manajemen Tagihan (Invoice Customer PT Semen)</h2>
+          <h2 className="text-base font-bold text-slate-800">Manajemen Tagihan (Invoice Customer)</h2>
           <p className="text-xs text-slate-400 mt-1">
             Staf Administrasi dapat menerbitkan invoice berdasarkan rencana pembayaran yang sudah diapprove Direktur, serta menambahkan log posisi tagihan.
           </p>
@@ -413,6 +444,8 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
                 setSelectedPayment(null);
                 setSelectedPayments([]);
                 setFormError('');
+                setPaymentSelectionSearch('');
+                setShowPaymentSelectionSuggestions(false);
               }}
               className="text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-50 rounded"
               id="btn-close-invoice"
@@ -432,7 +465,7 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               
               {/* Step 1: Tarik Rencana Pembayaran */}
-              <div className="space-y-1 md:col-span-2">
+              <div className="space-y-1.5 md:col-span-2">
                 <label className="text-xs font-bold text-indigo-900 block">
                   1. Pilih Satu atau Beberapa Referensi Pembayaran (Yang Telah Diapprove Direktur) <span className="text-rose-500">*</span>
                 </label>
@@ -442,40 +475,150 @@ export const InvoicesModule: React.FC<InvoicesModuleProps> = ({
                     Tidak ada referensi pembayaran aktif yang siap ditagih (hasInvoice = false).
                   </div>
                 ) : (
-                  <div className="border border-slate-200 rounded-lg overflow-hidden bg-slate-50/40">
-                    <div className="p-2 border-b border-slate-200 bg-white text-[10px] text-slate-500 font-bold uppercase tracking-wider flex justify-between items-center">
-                      <span>Daftar Rencana Pembayaran Tersedia</span>
-                      <span className="text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full font-extrabold">{selectedPayments.length} Terpilih</span>
-                    </div>
-                    <div className="max-h-56 overflow-y-auto divide-y divide-slate-100 bg-white">
-                      {eligiblePayments.map((p) => {
-                        const isChecked = selectedPayments.some(sp => sp.id === p.id);
-                        return (
-                          <div 
-                            key={p.id} 
-                            onClick={() => handleTogglePaymentSelection(p)}
-                            className={`p-2.5 flex items-start gap-3 text-xs cursor-pointer hover:bg-indigo-50/30 transition-colors ${
-                              isChecked ? 'bg-indigo-50/20 font-semibold' : ''
-                            }`}
+                  <div className="space-y-2">
+                    {/* Autocomplete / Search input field for suggestion mechanism */}
+                    <div className="relative">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="Cari & pilih rencana pembayaran (auto-suggest)..."
+                          value={paymentSelectionSearch}
+                          onChange={(e) => {
+                            setPaymentSelectionSearch(e.target.value);
+                            setShowPaymentSelectionSuggestions(true);
+                          }}
+                          onFocus={() => setShowPaymentSelectionSuggestions(true)}
+                          onBlur={() => {
+                            // Brief timeout to let the click on option complete before hiding menu
+                            setTimeout(() => setShowPaymentSelectionSuggestions(false), 250);
+                          }}
+                          className="text-xs w-full pl-9 pr-8 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 font-medium"
+                          id="input-payment-selection-search"
+                        />
+                        {paymentSelectionSearch && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPaymentSelectionSearch('');
+                              setShowPaymentSelectionSuggestions(false);
+                            }}
+                            className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 transition-colors"
                           >
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={() => {}} // handled by click parent
-                              className="mt-0.5 h-3.5 w-3.5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
-                            />
-                            <div className="min-w-0 flex-1">
-                              <div className="flex justify-between font-bold text-slate-800">
-                                <span className="truncate">{p.rekanan}</span>
-                                <span className="text-indigo-950 ml-2 shrink-0">{formatRupiah(p.jumlahBayar)}</span>
-                              </div>
-                              <p className="text-[10px] text-slate-500 truncate mt-0.5" title={p.catatan}>
-                                {p.catatan}
-                              </p>
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Floating Auto-Suggest Dropdown */}
+                      {showPaymentSelectionSuggestions && paymentSelectionSearch.trim() !== '' && (
+                        <div className="absolute z-30 left-0 right-0 mt-1 bg-white border border-indigo-100 rounded-lg shadow-lg max-h-48 overflow-y-auto divide-y divide-slate-100">
+                          {suggestedPayments.length === 0 ? (
+                            <div className="p-3 text-xs text-slate-400 text-center font-medium">
+                              Tidak ada rencana pembayaran yang cocok.
                             </div>
+                          ) : (
+                            suggestedPayments.map((p) => {
+                              const isChecked = selectedPayments.some(sp => sp.id === p.id);
+                              return (
+                                <button
+                                  key={p.id}
+                                  type="button"
+                                  onMouseDown={(e) => {
+                                    // prevent input blur before button registers click
+                                    e.preventDefault();
+                                  }}
+                                  onClick={() => {
+                                    handleTogglePaymentSelection(p);
+                                    setPaymentSelectionSearch('');
+                                    setShowPaymentSelectionSuggestions(false);
+                                  }}
+                                  className={`w-full text-left p-2.5 hover:bg-indigo-50/40 flex justify-between items-center text-xs transition-colors ${
+                                    isChecked ? 'bg-indigo-50/20 font-semibold' : ''
+                                  }`}
+                                >
+                                  <div className="min-w-0 flex-1">
+                                    <div className="font-bold text-slate-800 flex items-center gap-1.5 flex-wrap">
+                                      <span className="truncate">{p.rekanan}</span>
+                                      {p.kategori && (
+                                        <span className="text-[8px] bg-slate-100 text-slate-500 px-1 py-0.2 rounded font-black uppercase">
+                                          {p.kategori}
+                                        </span>
+                                      )}
+                                      {isChecked && (
+                                        <span className="text-[8px] bg-indigo-50/60 text-indigo-700 px-1 py-0.2 rounded font-black">
+                                          TERPILIH
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 mt-0.5 truncate italic" title={p.catatan}>
+                                      "{p.catatan || 'Tanpa catatan'}"
+                                    </p>
+                                  </div>
+                                  <div className="text-right ml-3 shrink-0">
+                                    <strong className="text-slate-900 block font-bold">{formatRupiah(p.jumlahBayar)}</strong>
+                                    <span className="text-[9px] text-slate-400 block font-semibold">{p.tanggalBayar}</span>
+                                  </div>
+                                </button>
+                              );
+                            })
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Checkbox-based selection list sorted and filtered */}
+                    <div className="border border-slate-200 rounded-lg overflow-hidden bg-slate-50/40">
+                      <div className="p-2 border-b border-slate-200 bg-white text-[10px] text-slate-500 font-bold uppercase tracking-wider flex justify-between items-center">
+                        <span>Daftar Rencana Pembayaran Tersedia (Urut Paling Lama)</span>
+                        <span className="text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full font-extrabold">{selectedPayments.length} Terpilih</span>
+                      </div>
+                      <div className="max-h-56 overflow-y-auto divide-y divide-slate-100 bg-white">
+                        {displayedPayments.length === 0 ? (
+                          <div className="p-4 text-center text-xs text-slate-400 font-medium">
+                            Tidak ada rencana pembayaran yang cocok dengan saringan pencarian.
                           </div>
-                        );
-                      })}
+                        ) : (
+                          displayedPayments.map((p) => {
+                            const isChecked = selectedPayments.some(sp => sp.id === p.id);
+                            return (
+                              <div 
+                                key={p.id} 
+                                onClick={() => handleTogglePaymentSelection(p)}
+                                className={`p-2.5 flex items-start gap-3 text-xs cursor-pointer hover:bg-indigo-50/30 transition-colors ${
+                                  isChecked ? 'bg-indigo-50/20 font-semibold' : ''
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => {}} // handled by click parent
+                                  className="mt-0.5 h-3.5 w-3.5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex justify-between font-bold text-slate-800">
+                                    <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                                      <span className="truncate">{p.rekanan}</span>
+                                      {p.kategori && (
+                                        <span className="text-[8px] bg-slate-100 text-slate-500 px-1 rounded font-black uppercase">
+                                          {p.kategori}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <span className="text-indigo-950 ml-2 shrink-0">{formatRupiah(p.jumlahBayar)}</span>
+                                  </div>
+                                  <div className="flex justify-between items-center mt-0.5 gap-2 text-[10px]">
+                                    <p className="text-slate-500 truncate italic" title={p.catatan}>
+                                      {p.catatan || 'Tanpa catatan'}
+                                    </p>
+                                    <span className="text-slate-400 font-medium shrink-0">Tgl: {p.tanggalBayar}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}

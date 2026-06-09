@@ -4,7 +4,18 @@ Semua rilis penting untuk platform **Sistem Pelacakan & Monitoring Piutang Rekan
 
 ---
 
-## [v1.10.0] - 9 Juni 2026 (Rilis Terbaru)
+## [v1.11.0] - 9 Juni 2026 (Rilis Terbaru)
+
+### ✨ Auto-suggest Pencarian & Urutan Kronologis Rencana Pembayaran (UX Improvements)
+*   **Penyortiran Kronologis (Oldest First):**
+    *   Daftar rencana pembayaran yang tersedia dalam Form Pembuatan Tagihan Baru kini secara otomatis diurutkan dengan rencana yang **paling lama** berada di paling atas, memperjelas skala prioritas jatuh tempo pencairan berikutnya.
+*   **Mekanisme Pencarian Auto-suggest Pembayaran:**
+    *   Menambahkan bilah pencarian dinamis (autocomplete/auto-suggest) di atas daftar rencana pembayaran. Pengguna dapat mengetik nama rekanan/supplier, kategori anggaran, tanggal, atau isi catatan untuk memunculkan saran yang sesuai secara real-time.
+    *   Mengintegrasikan fungsionalitas di mana memilih item dari daftar auto-suggest akan secara otomatis menautkannya, disandingkan dengan pilihan manual via checkbox konvensional.
+
+---
+
+## [v1.10.0] - 9 Juni 2026
 
 ### ✨ Seleksi Multi-item: Hapus Seleksi & Ubah Kategori Massal
 *   **Seleksi Multi-item untuk Peran Khusus:**

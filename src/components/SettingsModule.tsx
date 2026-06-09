@@ -2223,13 +2223,28 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
                 </div>
 
                 <div className="relative border-l-2 border-slate-100 pl-4 ml-2 space-y-6">
-                  {/* Version v1.10.0 */}
+                  {/* Version v1.11.0 */}
                   <div className="relative group">
                     <div className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-indigo-600 ring-4 ring-white" />
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-black text-slate-800">Versi v1.10.0 (Seleksi Multi-item: Hapus & Ubah Kategori)</span>
+                        <span className="text-xs font-black text-slate-800">Versi v1.11.0 (Auto-suggest Pencarian & Urutan Kronologis)</span>
                         <span className="text-[9px] bg-indigo-50 text-indigo-600 font-bold px-1.5 py-0.5 rounded">Rilis Terbaru</span>
+                      </div>
+                      <span className="text-[10px] text-slate-400 block mt-0.5">9 Juni 2026</span>
+                      <ul className="list-disc pl-4 text-xs text-slate-600 mt-2 space-y-1">
+                        <li><strong>Penyortiran Kronologis (Oldest First):</strong> Menyusun daftar rencana pembayaran dalam pembuatan invoice baru berdasarkan tanggal bayar terlama berada di paling atas guna prioritas jatuh tempo.</li>
+                        <li><strong>Mekanisme Pencarian Auto-suggest (AutoComplete):</strong> Menambahkan kotak pencarian pintar di atas daftar pilihan di mana mengetik nama rekanan, kategori, tanggal, atau catatan akan menyarankan pilihan pencocokan yang siap dicentang dengan sekali klik.</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  {/* Version v1.10.0 */}
+                  <div className="relative group">
+                    <div className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-slate-200 ring-4 ring-white" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-slate-800">Versi v1.10.0 (Seleksi Multi-item: Hapus &amp; Ubah Kategori)</span>
                       </div>
                       <span className="text-[10px] text-slate-400 block mt-0.5">9 Juni 2026</span>
                       <ul className="list-disc pl-4 text-xs text-slate-600 mt-2 space-y-1">
