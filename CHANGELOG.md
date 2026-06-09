@@ -4,7 +4,19 @@ Semua rilis penting untuk platform **Sistem Pelacakan & Monitoring Piutang Rekan
 
 ---
 
-## [v1.7.0] - 8 Juni 2026 (Rilis Terbaru)
+## [v1.8.0] - 9 Juni 2026 (Rilis Terbaru)
+
+### ✨ Penyuntingan Draf Pembayaran & Opsi Batal Setuju (Unapprove) Rencana
+*   **Penyuntingan Draf Pembayaran sebelum Disetujui:**
+    *   Pengguna dengan peran hak akses yang berwenang (Supervisor Keuangan Umum, Staf, & Admin) kini dapat menyunting seluruh rincian Rencana Pembayaran (rekanan, metode, kategori, jumlah, tgl bayar, & catatan) selama statusnya masih berupa **Draft** (sebelum disetujui Direktur).
+    *   Formulir input pembayaran akan terisi secara otomatis dan mengganti tajuk formulir secara dinamis menjadi mode pengeditan saat tombol "EDIT DRAF" ditekan.
+*   **Pembatalan Persetujuan Direktur (Unapprove Action):**
+    *   Menambahkan opsi tombol **"BATALKAN PERSETUJUAN (UNAPPROVE)"** bagi peran Direktur Utama / Administrator pada rencana pembayaran yang berstatus **Aktif (Telah Disetujui)** namun belum ditarik menjadi kaitan Daftar Tagihan (Invoice / `hasInvoice === false`).
+    *   Menekan tombol pembatalan akan menurunkan status pembayaran kembali secara aman menjadi **Draft**, menghapus riwayat metadata persetujuan sebelumnya, mengirimkan notifikasi sistem, dan mengizinkan pengeditan ulang jika terjadi kesalahan draf pengajuan awal.
+
+---
+
+## [v1.7.0] - 8 Juni 2026
 
 ### ✨ Kategori Kustom, Filter Lanjutan, & Ekspor Excel/CSV Ter-filter
 *   **Manajemen Kategori Anggaran Kustom:**

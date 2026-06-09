@@ -18,7 +18,8 @@ import {
   X,
   FileSpreadsheet,
   FileDown,
-  Tag
+  Tag,
+  Edit
 } from 'lucide-react';
 import { Payment, UserRole, CompanySettings } from '../types';
 
@@ -26,6 +27,8 @@ interface PaymentsModuleProps {
   payments: Payment[];
   onCreatePayment: (payment: Omit<Payment, 'id' | 'hasInvoice'>) => void;
   onApprovePayment: (id: string) => void;
+  onUnapprovePayment?: (id: string) => void;
+  onUpdatePayment?: (payment: Payment) => void;
   userRole: UserRole;
   selectedPaymentId?: string;
   onClearSelection?: () => void;
@@ -46,6 +49,8 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
   payments,
   onCreatePayment,
   onApprovePayment,
+  onUnapprovePayment,
+  onUpdatePayment,
   userRole,
   selectedPaymentId,
   onClearSelection,
@@ -54,6 +59,7 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
   const [searchTerm, setSearchTerm ] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Draft' | 'Aktif'>('All');
   const [isAddingNew, setIsAddingNew] = useState(false);
+  const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
 
   // New filter states
   const [filterStartDate, setFilterStartDate] = useState('');
@@ -128,6 +134,33 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
     }
   }, [tanggalBayar]);
 
+  const handleStartEdit = (p: Payment) => {
+    setEditingPaymentId(p.id);
+    setRekanan(p.rekanan);
+    setMetodeBayar(p.metodeBayar);
+    setKategori(p.kategori || categoryOptions[0] || '');
+    setJumlahBayar(p.jumlahBayar);
+    setJumlahBayarDisplay(p.jumlahBayar.toLocaleString('id-ID'));
+    setTanggalBayar(p.tanggalBayar);
+    setTanggalDeadline(p.tanggalDeadlineTagihan);
+    setCatatan(p.catatan);
+    setIsAddingNew(true);
+    // Smooth scroll to form
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCloseForm = () => {
+    setIsAddingNew(false);
+    setEditingPaymentId(null);
+    setRekanan('');
+    setJumlahBayar('');
+    setJumlahBayarDisplay('');
+    setMetodeBayar(paymentMethods[0] || 'Transfer Mandiri');
+    setKategori(categoryOptions[0] || '');
+    setCatatan('');
+    setFormError('');
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
@@ -149,25 +182,36 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
       return;
     }
 
-    onCreatePayment({
-      rekanan,
-      tanggalBayar,
-      jumlahBayar: Number(jumlahBayar),
-      metodeBayar,
-      kategori,
-      catatan,
-      tanggalDeadlineTagihan: tanggalDeadline,
-      status: 'Draft', // always begins as draft by Spv. Keuangan
-    });
+    if (editingPaymentId) {
+      if (onUpdatePayment) {
+        onUpdatePayment({
+          id: editingPaymentId,
+          rekanan,
+          tanggalBayar,
+          jumlahBayar: Number(jumlahBayar),
+          metodeBayar,
+          kategori,
+          catatan,
+          tanggalDeadlineTagihan: tanggalDeadline,
+          status: 'Draft',
+          hasInvoice: false,
+        });
+      }
+    } else {
+      onCreatePayment({
+        rekanan,
+        tanggalBayar,
+        jumlahBayar: Number(jumlahBayar),
+        metodeBayar,
+        kategori,
+        catatan,
+        tanggalDeadlineTagihan: tanggalDeadline,
+        status: 'Draft',
+      });
+    }
 
     // Reset Form
-    setRekanan('');
-    setJumlahBayar('');
-    setJumlahBayarDisplay('');
-    setMetodeBayar(paymentMethods[0] || 'Transfer Mandiri');
-    setKategori(categoryOptions[0] || '');
-    setCatatan('');
-    setIsAddingNew(false);
+    handleCloseForm();
   };
 
   const filteredPayments = payments.filter((p) => {
@@ -266,14 +310,20 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
         <div className="bg-white rounded-xl border border-indigo-100 shadow-sm p-5 animate-fadeIn" id="payment-add-form">
           <div className="flex items-center justify-between border-b border-indigo-50 pb-3 mb-4">
             <h3 className="text-sm font-bold text-indigo-950 flex items-center gap-1.5">
-              <Plus className="h-4 w-4 text-indigo-600" />
-              Buat Draf Rencana Pembayaran Baru
+              {editingPaymentId ? (
+                <>
+                  <Edit className="h-4 w-4 text-indigo-600" />
+                  Edit Draf Rencana Pembayaran
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 text-indigo-600" />
+                  Buat Draf Rencana Pembayaran Baru
+                </>
+              )}
             </h3>
             <button 
-              onClick={() => {
-                setIsAddingNew(false);
-                setFormError('');
-              }}
+              onClick={handleCloseForm}
               className="text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-50 rounded"
               id="btn-close-add-form"
             >
@@ -453,7 +503,7 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
             <div className="flex justify-end gap-3 pt-2">
               <button
                 type="button"
-                onClick={() => setIsAddingNew(false)}
+                onClick={handleCloseForm}
                 className="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs px-4 py-2 rounded-lg cursor-pointer transition-colors"
                 id="btn-cancel-add-payment"
               >
@@ -464,7 +514,7 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
                 className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-5 py-2 rounded-lg shadow-sm hover:shadow transition-all cursor-pointer"
                 id="btn-submit-payment"
               >
-                Simpan & Kirim ke Direktur
+                {editingPaymentId ? 'Perbarui & Kirim ke Direktur' : 'Simpan & Kirim ke Direktur'}
               </button>
             </div>
           </form>
@@ -681,19 +731,35 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
                                       <Clock className="h-4 w-4 text-amber-500 shrink-0" />
                                       <span>Status saat ini: <strong className="text-amber-700">DRAFT</strong>. Membutuhkan verifikasi Direktur agar siap ditarik ke Tagihan.</span>
                                     </div>
-                                    {canApprove ? (
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          onApprovePayment(p.id);
-                                        }}
-                                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[11px] px-3.5 py-1.5 rounded-lg flex items-center gap-1 transition-all shadow-sm cursor-pointer"
-                                        id={`btn-approve-${p.id}`}
-                                      >
-                                        <UserCheck className="h-3.5 w-3.5" />
-                                        BERIKAN PERSETUJUAN (APPROVE)
-                                      </button>
-                                    ) : (
+                                    <div className="flex flex-wrap gap-2">
+                                      {canApprove && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            onApprovePayment(p.id);
+                                          }}
+                                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[11px] px-3.5 py-1.5 rounded-lg flex items-center gap-1 transition-all shadow-sm cursor-pointer"
+                                          id={`btn-approve-${p.id}`}
+                                        >
+                                          <UserCheck className="h-3.5 w-3.5" />
+                                          BERIKAN PERSETUJUAN (APPROVE)
+                                        </button>
+                                      )}
+                                      {(userRole === 'SUPERVISOR_KEUANGAN_UMUM' || userRole === 'ADMINISTRATOR' || userRole === 'STAF_ADMINISTRASI_UMUM') && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleStartEdit(p);
+                                          }}
+                                          className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-extrabold text-[11px] px-3.5 py-1.5 rounded-lg flex items-center gap-1 border border-indigo-200 transition-all shadow-2xs cursor-pointer"
+                                          id={`btn-edit-payment-${p.id}`}
+                                        >
+                                          <Edit className="h-3.5 w-3.5" />
+                                          EDIT DRAF
+                                        </button>
+                                      )}
+                                    </div>
+                                    {!canApprove && (
                                       <div className="p-2 bg-amber-50 border border-amber-100 rounded text-[10px] text-amber-800">
                                         Lakukan login sebagai <strong>Direktur</strong> untuk menyetujui transaksi ini.
                                       </div>
@@ -710,8 +776,21 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
                                     </p>
                                     
                                     {!p.hasInvoice && (
-                                      <div className="pt-2">
-                                        <p className="text-[11px] text-slate-500 mb-2">Data ini siap dipakai oleh Staf Administrasi untuk membuat tagihan resmi ke Customer PT Semen.</p>
+                                      <div className="pt-2 space-y-2">
+                                        <p className="text-[11px] text-slate-500">Data ini siap dipakai oleh Staf Administrasi untuk membuat tagihan resmi ke Customer PT Semen.</p>
+                                        {(userRole === 'DIREKTUR' || userRole === 'ADMINISTRATOR') && onUnapprovePayment && (
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              onUnapprovePayment(p.id);
+                                            }}
+                                            className="bg-rose-50 hover:bg-rose-100 text-rose-700 font-extrabold text-[11px] px-3.5 py-1.5 rounded-lg flex items-center gap-1 transition-all border border-rose-200 cursor-pointer shadow-2xs inline-flex"
+                                            id={`btn-unapprove-${p.id}`}
+                                          >
+                                            <X className="h-3.5 w-3.5" />
+                                            BATALKAN PERSETUJUAN (UNAPPROVE)
+                                          </button>
+                                        )}
                                       </div>
                                     )}
                                   </div>

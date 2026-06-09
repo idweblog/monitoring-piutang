@@ -1012,6 +1012,45 @@ export default function App() {
     }
   };
 
+  const handleUpdatePayment = async (updatedPay: Payment) => {
+    try {
+      await persistSetDoc('payments', updatedPay.id, updatedPay);
+      alert('Rencana pembayaran berhasil diperbarui!');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `payments/${updatedPay.id}`);
+    }
+  };
+
+  const handleUnapprovePayment = async (paymentId: string) => {
+    const targetPay = payments.find(p => p.id === paymentId);
+    if (!targetPay) return;
+
+    const updatedPayment = {
+      ...targetPay,
+      status: 'Draft' as const,
+    };
+    delete (updatedPayment as any).approvedBy;
+    delete (updatedPayment as any).tanggalApprove;
+
+    const newNotif: AppNotification = {
+      id: `notif-${Date.now()}`,
+      judul: 'Persetujuan Pembayaran Dibatalkan',
+      deskripsi: `Persetujuan rencana pembayaran rekanan ${targetPay.rekanan} senilai Rp ${targetPay.jumlahBayar.toLocaleString('id-ID')} dibatalkan oleh Direktur. Status kembali menjadi Draf agar dapat diedit.`,
+      tanggal: '2026-06-09',
+      tipe: 'system',
+      read: false,
+      linkTo: { module: 'payments', id: targetPay.id },
+    };
+
+    try {
+      await persistSetDoc('payments', paymentId, updatedPayment);
+      await persistSetDoc('notifications', newNotif.id, newNotif);
+      alert(`Persetujuan rencana pembayaran ${targetPay.rekanan} berhasil dibatalkan. Status diturunkan kembali menjadi Draf.`);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `payments/${paymentId}`);
+    }
+  };
+
   const handleCreateInvoice = async (newInv: Omit<Invoice, 'id'>, initialLogPos: string) => {
     const invoiceId = `inv-${Date.now()}`;
     const freshInvoice: Invoice = {
@@ -2041,6 +2080,8 @@ service cloud.firestore {
                   payments={payments}
                   onCreatePayment={handleAddNewPayment}
                   onApprovePayment={handleApprovePayment}
+                  onUpdatePayment={handleUpdatePayment}
+                  onUnapprovePayment={handleUnapprovePayment}
                   userRole={userRole}
                   selectedPaymentId={activeFilterId}
                   onClearSelection={() => setActiveFilterId(undefined)}
