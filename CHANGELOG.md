@@ -4,7 +4,18 @@ Semua rilis penting untuk platform **Sistem Pelacakan & Monitoring Piutang Rekan
 
 ---
 
-## [v1.9.0] - 9 Juni 2026 (Rilis Terbaru)
+## [v1.10.0] - 9 Juni 2026 (Rilis Terbaru)
+
+### ✨ Seleksi Multi-item: Hapus Seleksi & Ubah Kategori Massal
+*   **Seleksi Multi-item untuk Peran Khusus:**
+    *   Pengguna dengan peran **Supervisor Keuangan** & **Administrator** kini memiliki kemampuan untuk melakukan seleksi multi-item (multi-select check) pada rencana pembayaran aktif maupun draf yang terdaftar.
+*   **Tindakan Massal Operasional (Bulk Action panel):**
+    *   **Ubah Kategori Secara Serentak:** Memungkinkan penetapan Kategori Anggaran baru secara massal bagi seluruh rencana pembayaran yang tercentang sekaligus.
+    *   **Hapus Sekaligus (Bulk Delete):** Mempermudah pembersihan data atau draf yang salah pendaftaran secara serentak dengan sekali konfirmasi aman.
+
+---
+
+## [v1.9.0] - 9 Juni 2026
 
 ### ✨ Persetujuan Massal (Bulk Approval) & Optimalisasi Dialog Simpan
 *   **Persetujuan Massal (Bulk Approval):**

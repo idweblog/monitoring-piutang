@@ -1088,6 +1088,45 @@ export default function App() {
     }
   };
 
+  const handleBulkDeletePayments = async (paymentIds: string[]) => {
+    let deletedCount = 0;
+    try {
+      for (const id of paymentIds) {
+        const p = payments.find(pay => pay.id === id);
+        if (!p) continue;
+        await persistDeleteDoc('payments', id);
+        deletedCount++;
+      }
+      if (deletedCount > 0) {
+        alert(`Berhasil menghapus sekaligus ${deletedCount} rencana pembayaran.`);
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `payments-bulk-delete`);
+    }
+  };
+
+  const handleBulkChangeCategory = async (paymentIds: string[], newCategory: string) => {
+    let updatedCount = 0;
+    try {
+      for (const id of paymentIds) {
+        const p = payments.find(pay => pay.id === id);
+        if (!p) continue;
+
+        const updatedPayment = {
+          ...p,
+          kategori: newCategory,
+        };
+        await persistSetDoc('payments', id, updatedPayment);
+        updatedCount++;
+      }
+      if (updatedCount > 0) {
+        alert(`Berhasil memperbarui kategori menjadi "${newCategory}" untuk ${updatedCount} rencana pembayaran.`);
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `payments-bulk-category`);
+    }
+  };
+
   const handleCreateInvoice = async (newInv: Omit<Invoice, 'id'>, initialLogPos: string) => {
     const invoiceId = `inv-${Date.now()}`;
     const freshInvoice: Invoice = {
@@ -2120,6 +2159,8 @@ service cloud.firestore {
                   onUpdatePayment={handleUpdatePayment}
                   onUnapprovePayment={handleUnapprovePayment}
                   onBulkApprovePayments={handleBulkApprovePayments}
+                  onBulkDeletePayments={handleBulkDeletePayments}
+                  onBulkChangeCategory={handleBulkChangeCategory}
                   userRole={userRole}
                   selectedPaymentId={activeFilterId}
                   onClearSelection={() => setActiveFilterId(undefined)}

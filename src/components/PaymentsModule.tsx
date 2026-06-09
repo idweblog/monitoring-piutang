@@ -19,7 +19,8 @@ import {
   FileSpreadsheet,
   FileDown,
   Tag,
-  Edit
+  Edit,
+  Trash2
 } from 'lucide-react';
 import { Payment, UserRole, CompanySettings } from '../types';
 
@@ -30,6 +31,8 @@ interface PaymentsModuleProps {
   onUnapprovePayment?: (id: string) => void;
   onUpdatePayment?: (payment: Payment) => void;
   onBulkApprovePayments?: (ids: string[]) => void;
+  onBulkDeletePayments?: (ids: string[]) => void;
+  onBulkChangeCategory?: (ids: string[], category: string) => void;
   userRole: UserRole;
   selectedPaymentId?: string;
   onClearSelection?: () => void;
@@ -53,6 +56,8 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
   onUnapprovePayment,
   onUpdatePayment,
   onBulkApprovePayments,
+  onBulkDeletePayments,
+  onBulkChangeCategory,
   userRole,
   selectedPaymentId,
   onClearSelection,
@@ -63,6 +68,7 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
   const [selectedPaymentIds, setSelectedPaymentIds] = useState<string[]>([]);
+  const [bulkCategory, setBulkCategory] = useState('');
 
   // New filter states
   const [filterStartDate, setFilterStartDate] = useState('');
@@ -105,6 +111,7 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
     }
     if (categoryOptions.length > 0) {
       setKategori(categoryOptions[0]);
+      setBulkCategory(categoryOptions[0]);
     }
   }, [settings]);
 
@@ -284,18 +291,20 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
 
   const canCreate = userRole === 'SUPERVISOR_KEUANGAN_UMUM' || userRole === 'ADMINISTRATOR';
   const canApprove = userRole === 'DIREKTUR' || userRole === 'ADMINISTRATOR';
+  const canBulkManage = userRole === 'SUPERVISOR_KEUANGAN_UMUM' || userRole === 'ADMINISTRATOR';
 
-  const draftsInFiltered = filteredPayments.filter(p => p.status === 'Draft');
-  const allDraftsSelected = draftsInFiltered.length > 0 && draftsInFiltered.every(p => selectedPaymentIds.includes(p.id));
+  const canSelectAny = canBulkManage;
+  const selectablePayments = filteredPayments.filter(p => canSelectAny ? true : p.status === 'Draft');
+  const allSelected = selectablePayments.length > 0 && selectablePayments.every(p => selectedPaymentIds.includes(p.id));
 
   const handleToggleSelectAll = () => {
-    if (allDraftsSelected) {
-      const draftIds = draftsInFiltered.map(p => p.id);
-      setSelectedPaymentIds(prev => prev.filter(id => !draftIds.includes(id)));
+    if (allSelected) {
+      const selectableIds = selectablePayments.map(p => p.id);
+      setSelectedPaymentIds(prev => prev.filter(id => !selectableIds.includes(id)));
     } else {
-      const draftIds = draftsInFiltered.map(p => p.id);
+      const selectableIds = selectablePayments.map(p => p.id);
       setSelectedPaymentIds(prev => {
-        const unique = new Set([...prev, ...draftIds]);
+        const unique = new Set([...prev, ...selectableIds]);
         return Array.from(unique);
       });
     }
@@ -653,34 +662,87 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
           </div>
         ) : (
           <div>
-            {canApprove && selectedPaymentIds.length > 0 && (
-              <div className="bg-emerald-50 border-b border-emerald-100 px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fadeIn">
+            {(canApprove || canBulkManage) && selectedPaymentIds.length > 0 && (
+              <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 xl:py-2.5 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3 animate-fadeIn rounded-t-xl">
                 <div className="flex items-center gap-2">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-[10px] font-extrabold text-white shadow-2xs">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-[10px] font-black text-white shadow-xs">
                     {selectedPaymentIds.length}
                   </span>
-                  <p className="text-xs text-emerald-800 font-semibold">
-                    Rencana pembayaran berstatus draf terpilih untuk disetujui sekaligus.
+                  <p className="text-xs text-slate-800 font-bold">
+                    Item terpilih untuk tindakan massal.
                   </p>
                 </div>
-                <div className="flex items-center gap-2 self-end sm:self-auto">
-                  <button
-                    onClick={() => {
-                      if (onBulkApprovePayments) {
-                        onBulkApprovePayments(selectedPaymentIds);
-                        setSelectedPaymentIds([]);
-                      }
-                    }}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[10px] sm:text-[11px] px-3.5 py-2 rounded-lg flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
-                    id="btn-bulk-approve"
-                    type="button"
-                  >
-                    <UserCheck className="h-3.5 w-3.5" />
-                    SETUJUI SEKALIGUS ({selectedPaymentIds.length})
-                  </button>
+                <div className="flex flex-wrap items-center gap-2.5">
+                  {canBulkManage && (
+                    <>
+                      <div className="flex items-center gap-1.5 bg-white border border-slate-200 p-1 rounded-lg">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wide px-1.5">Kategori:</span>
+                        <select
+                          value={bulkCategory}
+                          onChange={(e) => setBulkCategory(e.target.value)}
+                          className="text-xs py-0.5 px-2 bg-transparent border-none outline-none focus:ring-0 font-bold text-slate-700"
+                        >
+                          {categoryOptions.map((opt) => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => {
+                            if (onBulkChangeCategory) {
+                              onBulkChangeCategory(selectedPaymentIds, bulkCategory);
+                              setSelectedPaymentIds([]);
+                            }
+                          }}
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[10px] px-3 py-1.5 rounded-md flex items-center gap-1 transition-colors cursor-pointer"
+                          type="button"
+                        >
+                          <Tag className="h-3 w-3" />
+                          UBAH KATEGORI
+                        </button>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`Apakah Anda yakin ingin menghapus sekaligus ${selectedPaymentIds.length} rencana pembayaran?`)) {
+                            if (onBulkDeletePayments) {
+                              onBulkDeletePayments(selectedPaymentIds);
+                              setSelectedPaymentIds([]);
+                            }
+                          }
+                        }}
+                        className="bg-rose-50 hover:bg-rose-100 text-rose-600 font-extrabold text-[10px] border border-rose-200 px-3.5 py-2 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+                        type="button"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        HAPUS ({selectedPaymentIds.length})
+                      </button>
+                    </>
+                  )}
+
+                  {canApprove && (
+                    <button
+                      onClick={() => {
+                        const draftIds = selectablePayments.filter(p => p.status === 'Draft' && selectedPaymentIds.includes(p.id)).map(p => p.id);
+                        if (draftIds.length === 0) {
+                          alert("Tidak ada rencana pembayaran berstatus 'Draft' dari item yang terpilih.");
+                          return;
+                        }
+                        if (onBulkApprovePayments) {
+                          onBulkApprovePayments(draftIds);
+                          setSelectedPaymentIds([]);
+                        }
+                      }}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[10px] px-3.5 py-2 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+                      type="button"
+                    >
+                      <UserCheck className="h-3.5 w-3.5" />
+                      SETUJUI (Draft)
+                    </button>
+                  )}
+
                   <button
                     onClick={() => setSelectedPaymentIds([])}
-                    className="bg-white hover:bg-slate-100 text-slate-500 font-bold text-[10px] sm:text-[11px] px-3.5 py-2 border border-slate-200 rounded-lg transition-colors cursor-pointer"
+                    className="bg-white hover:bg-slate-100 text-slate-500 font-bold text-[10px] px-3.5 py-2 border border-slate-200 rounded-lg transition-colors cursor-pointer"
                     id="btn-bulk-clear"
                     type="button"
                   >
@@ -694,14 +756,14 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
               <table className="w-full border-collapse" id="payments-table">
               <thead>
                 <tr className="bg-slate-50/70 border-b border-slate-100 text-left text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
-                  {canApprove && (
+                  {(canApprove || canBulkManage) && (
                     <th className="px-4 py-3 text-center w-10">
                       <input
                         type="checkbox"
-                        checked={allDraftsSelected}
+                        checked={allSelected}
                         onChange={handleToggleSelectAll}
                         className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer h-3.5 w-3.5"
-                        aria-label="Pilih Semua Draft"
+                        aria-label="Pilih Semua"
                       />
                     </th>
                   )}
@@ -728,9 +790,9 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
                         onClick={() => setExpandedPaymentId(isExpanded ? null : p.id)}
                         id={`payment-row-${p.id}`}
                       >
-                        {canApprove && (
+                        {(canApprove || canBulkManage) && (
                           <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
-                            {p.status === 'Draft' ? (
+                            {(canSelectAny || p.status === 'Draft') ? (
                               <input
                                 type="checkbox"
                                 checked={selectedPaymentIds.includes(p.id)}
@@ -738,7 +800,7 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
                                 className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer h-3.5 w-3.5"
                               />
                             ) : (
-                              <span className="inline-block w-3.5 h-3.5" />
+                              <span className="inline-block w-3.5 h-3.5 text-slate-400 font-extrabold">-</span>
                             )}
                           </td>
                         )}
@@ -800,7 +862,7 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
                       {/* Expandable details panel */}
                       {isExpanded && (
                         <tr>
-                          <td colSpan={canApprove ? 8 : 7} className="px-4 py-4 bg-indigo-50/5 border-l-4 border-indigo-400">
+                          <td colSpan={(canApprove || canBulkManage) ? 8 : 7} className="px-4 py-4 bg-indigo-50/5 border-l-4 border-indigo-400">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                               <div className="space-y-2">
                                 <h4 className="font-bold text-indigo-950 uppercase tracking-wider text-[11px]">Detail Rencana Pembayaran</h4>
