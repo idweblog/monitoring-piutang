@@ -976,7 +976,6 @@ export default function App() {
     try {
       await persistSetDoc('payments', payId, freshPayment);
       await persistSetDoc('notifications', newNotif.id, newNotif);
-      alert('Sukses menyimpan draf pembayaran! Notifikasi persetujuan berhasil diteruskan ke Direktur.');
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `payments/${payId}`);
     }
