@@ -29,6 +29,7 @@ interface PaymentsModuleProps {
   onApprovePayment: (id: string) => void;
   onUnapprovePayment?: (id: string) => void;
   onUpdatePayment?: (payment: Payment) => void;
+  onBulkApprovePayments?: (ids: string[]) => void;
   userRole: UserRole;
   selectedPaymentId?: string;
   onClearSelection?: () => void;
@@ -51,6 +52,7 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
   onApprovePayment,
   onUnapprovePayment,
   onUpdatePayment,
+  onBulkApprovePayments,
   userRole,
   selectedPaymentId,
   onClearSelection,
@@ -60,6 +62,7 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
   const [statusFilter, setStatusFilter] = useState<'All' | 'Draft' | 'Aktif'>('All');
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
+  const [selectedPaymentIds, setSelectedPaymentIds] = useState<string[]>([]);
 
   // New filter states
   const [filterStartDate, setFilterStartDate] = useState('');
@@ -281,6 +284,28 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
 
   const canCreate = userRole === 'SUPERVISOR_KEUANGAN_UMUM' || userRole === 'ADMINISTRATOR';
   const canApprove = userRole === 'DIREKTUR' || userRole === 'ADMINISTRATOR';
+
+  const draftsInFiltered = filteredPayments.filter(p => p.status === 'Draft');
+  const allDraftsSelected = draftsInFiltered.length > 0 && draftsInFiltered.every(p => selectedPaymentIds.includes(p.id));
+
+  const handleToggleSelectAll = () => {
+    if (allDraftsSelected) {
+      const draftIds = draftsInFiltered.map(p => p.id);
+      setSelectedPaymentIds(prev => prev.filter(id => !draftIds.includes(id)));
+    } else {
+      const draftIds = draftsInFiltered.map(p => p.id);
+      setSelectedPaymentIds(prev => {
+        const unique = new Set([...prev, ...draftIds]);
+        return Array.from(unique);
+      });
+    }
+  };
+
+  const handleToggleSelectRow = (pId: string) => {
+    setSelectedPaymentIds(prev => 
+      prev.includes(pId) ? prev.filter(id => id !== pId) : [...prev, pId]
+    );
+  };
 
   return (
     <div className="space-y-6" id="payments-module-root">
@@ -627,10 +652,59 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
             <p>Tidak ada data pembayaran yang cocok.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse" id="payments-table">
+          <div>
+            {canApprove && selectedPaymentIds.length > 0 && (
+              <div className="bg-emerald-50 border-b border-emerald-100 px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fadeIn">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-[10px] font-extrabold text-white shadow-2xs">
+                    {selectedPaymentIds.length}
+                  </span>
+                  <p className="text-xs text-emerald-800 font-semibold">
+                    Rencana pembayaran berstatus draf terpilih untuk disetujui sekaligus.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 self-end sm:self-auto">
+                  <button
+                    onClick={() => {
+                      if (onBulkApprovePayments) {
+                        onBulkApprovePayments(selectedPaymentIds);
+                        setSelectedPaymentIds([]);
+                      }
+                    }}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[10px] sm:text-[11px] px-3.5 py-2 rounded-lg flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                    id="btn-bulk-approve"
+                    type="button"
+                  >
+                    <UserCheck className="h-3.5 w-3.5" />
+                    SETUJUI SEKALIGUS ({selectedPaymentIds.length})
+                  </button>
+                  <button
+                    onClick={() => setSelectedPaymentIds([])}
+                    className="bg-white hover:bg-slate-100 text-slate-500 font-bold text-[10px] sm:text-[11px] px-3.5 py-2 border border-slate-200 rounded-lg transition-colors cursor-pointer"
+                    id="btn-bulk-clear"
+                    type="button"
+                  >
+                    Batal
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse" id="payments-table">
               <thead>
                 <tr className="bg-slate-50/70 border-b border-slate-100 text-left text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+                  {canApprove && (
+                    <th className="px-4 py-3 text-center w-10">
+                      <input
+                        type="checkbox"
+                        checked={allDraftsSelected}
+                        onChange={handleToggleSelectAll}
+                        className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer h-3.5 w-3.5"
+                        aria-label="Pilih Semua Draft"
+                      />
+                    </th>
+                  )}
                   <th className="px-4 py-3">Nama Rekanan Vendor</th>
                   <th className="px-4 py-3">Tgl Pembayaran</th>
                   <th className="px-4 py-3">Nominal Bayar</th>
@@ -654,6 +728,20 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
                         onClick={() => setExpandedPaymentId(isExpanded ? null : p.id)}
                         id={`payment-row-${p.id}`}
                       >
+                        {canApprove && (
+                          <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+                            {p.status === 'Draft' ? (
+                              <input
+                                type="checkbox"
+                                checked={selectedPaymentIds.includes(p.id)}
+                                onChange={() => handleToggleSelectRow(p.id)}
+                                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer h-3.5 w-3.5"
+                              />
+                            ) : (
+                              <span className="inline-block w-3.5 h-3.5" />
+                            )}
+                          </td>
+                        )}
                         <td className="px-4 py-3.5 font-bold text-slate-800">
                           <div>
                             <span className="block">{p.rekanan}</span>
@@ -712,7 +800,7 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
                       {/* Expandable details panel */}
                       {isExpanded && (
                         <tr>
-                          <td colSpan={7} className="px-4 py-4 bg-indigo-50/5 border-l-4 border-indigo-400">
+                          <td colSpan={canApprove ? 8 : 7} className="px-4 py-4 bg-indigo-50/5 border-l-4 border-indigo-400">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                               <div className="space-y-2">
                                 <h4 className="font-bold text-indigo-950 uppercase tracking-wider text-[11px]">Detail Rencana Pembayaran</h4>
@@ -805,6 +893,7 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
                 })}
               </tbody>
             </table>
+          </div>
           </div>
         )}
       </div>

@@ -1050,6 +1050,44 @@ export default function App() {
     }
   };
 
+  const handleBulkApprovePayments = async (paymentIds: string[]) => {
+    let approvedCount = 0;
+    const approvedNames: string[] = [];
+    try {
+      for (const id of paymentIds) {
+        const approvedPay = payments.find(p => p.id === id);
+        if (!approvedPay || approvedPay.status !== 'Draft') continue;
+
+        const updatedPayment = {
+          ...approvedPay,
+          status: 'Aktif' as const,
+          approvedBy: userRole === 'DIREKTUR' ? 'Direktur Utama (Verified)' : 'Administrator System',
+          tanggalApprove: '2026-05-28',
+        };
+
+        const newNotif: AppNotification = {
+          id: `notif-${Date.now()}-${id}`,
+          judul: 'Rencana Pembayaran Disetujui (Bulk)',
+          deskripsi: `Rencana pembayaran rekanan ${approvedPay.rekanan} senilai Rp ${approvedPay.jumlahBayar.toLocaleString('id-ID')} telah disetujui Direktur. Staf Admin sekarang bisa menerbitkan tagihan.`,
+          tanggal: '2026-05-28',
+          tipe: 'system',
+          read: false,
+          linkTo: { module: 'invoices', id: approvedPay.id },
+        };
+
+        await persistSetDoc('payments', id, updatedPayment);
+        await persistSetDoc('notifications', newNotif.id, newNotif);
+        approvedCount++;
+        approvedNames.push(approvedPay.rekanan);
+      }
+      if (approvedCount > 0) {
+        alert(`Berhasil menyetujui sekaligus ${approvedCount} rencana pembayaran:\n- ${approvedNames.join('\n- ')}!`);
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `payments-bulk`);
+    }
+  };
+
   const handleCreateInvoice = async (newInv: Omit<Invoice, 'id'>, initialLogPos: string) => {
     const invoiceId = `inv-${Date.now()}`;
     const freshInvoice: Invoice = {
@@ -2081,6 +2119,7 @@ service cloud.firestore {
                   onApprovePayment={handleApprovePayment}
                   onUpdatePayment={handleUpdatePayment}
                   onUnapprovePayment={handleUnapprovePayment}
+                  onBulkApprovePayments={handleBulkApprovePayments}
                   userRole={userRole}
                   selectedPaymentId={activeFilterId}
                   onClearSelection={() => setActiveFilterId(undefined)}

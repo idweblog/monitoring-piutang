@@ -4,7 +4,18 @@ Semua rilis penting untuk platform **Sistem Pelacakan & Monitoring Piutang Rekan
 
 ---
 
-## [v1.8.0] - 9 Juni 2026 (Rilis Terbaru)
+## [v1.9.0] - 9 Juni 2026 (Rilis Terbaru)
+
+### ✨ Persetujuan Massal (Bulk Approval) & Optimalisasi Dialog Simpan
+*   **Persetujuan Massal (Bulk Approval):**
+    *   Pengguna dengan peran berwenang (Direktur Utama & Admin) kini dapat memilih beberapa rencana pembayaran berstatus **Draft** sekaligus lewat kotak centang (checkbox).
+    *   Menambahkan tombol **"SETUJUI SEKALIGUS"** untuk melakukan persetujuan massal pada seluruh draf yang terpilih, menyelesaikan proses persetujuan dengan sekali klik.
+*   **Penghilangan Dialog Popup Simpan:**
+    *   Sesuai umpan balik optimasi, dialog popup `alert` pemberitahuan sukses menyimpan draf telah dihilangkan untuk memperlancar transisi pengisian draf secara beruntun tanpa interupsi.
+
+---
+
+## [v1.8.0] - 9 Juni 2026
 
 ### ✨ Penyuntingan Draf Pembayaran & Opsi Batal Setuju (Unapprove) Rencana
 *   **Penyuntingan Draf Pembayaran sebelum Disetujui:**
