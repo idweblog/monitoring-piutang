@@ -745,7 +745,7 @@ export const PaymentsModule: React.FC<PaymentsModuleProps> = ({
                                           BERIKAN PERSETUJUAN (APPROVE)
                                         </button>
                                       )}
-                                      {(userRole === 'SUPERVISOR_KEUANGAN_UMUM' || userRole === 'ADMINISTRATOR' || userRole === 'STAF_ADMINISTRASI_UMUM') && (
+                                      {(userRole === 'SUPERVISOR_KEUANGAN_UMUM' || userRole === 'ADMINISTRATOR') && (
                                         <button
                                           onClick={(e) => {
                                             e.stopPropagation();

@@ -8,7 +8,7 @@ Semua rilis penting untuk platform **Sistem Pelacakan & Monitoring Piutang Rekan
 
 ### ✨ Penyuntingan Draf Pembayaran & Opsi Batal Setuju (Unapprove) Rencana
 *   **Penyuntingan Draf Pembayaran sebelum Disetujui:**
-    *   Pengguna dengan peran hak akses yang berwenang (Supervisor Keuangan Umum, Staf, & Admin) kini dapat menyunting seluruh rincian Rencana Pembayaran (rekanan, metode, kategori, jumlah, tgl bayar, & catatan) selama statusnya masih berupa **Draft** (sebelum disetujui Direktur).
+    *   Pengguna dengan peran hak akses yang berwenang (Supervisor Keuangan Umum & Admin) kini dapat menyunting seluruh rincian Rencana Pembayaran (rekanan, metode, kategori, jumlah, tgl bayar, & catatan) selama statusnya masih berupa **Draft** (sebelum disetujui Direktur).
     *   Formulir input pembayaran akan terisi secara otomatis dan mengganti tajuk formulir secara dinamis menjadi mode pengeditan saat tombol "EDIT DRAF" ditekan.
 *   **Pembatalan Persetujuan Direktur (Unapprove Action):**
     *   Menambahkan opsi tombol **"BATALKAN PERSETUJUAN (UNAPPROVE)"** bagi peran Direktur Utama / Administrator pada rencana pembayaran yang berstatus **Aktif (Telah Disetujui)** namun belum ditarik menjadi kaitan Daftar Tagihan (Invoice / `hasInvoice === false`).

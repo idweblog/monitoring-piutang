@@ -2233,7 +2233,7 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
                       </div>
                       <span className="text-[10px] text-slate-400 block mt-0.5">9 Juni 2026</span>
                       <ul className="list-disc pl-4 text-xs text-slate-600 mt-2 space-y-1">
-                        <li><strong>Opsi Sunting/Edit Draf Pembayaran:</strong> Pengguna dapat menyunting data Rencana Pembayaran berstatus "Draft" sebelum disetujui Direktur. Sifatnya dinamis dan secara otomatis memuat seluruh draf data ke formulir input utama pelaku kustomisasi.</li>
+                        <li><strong>Opsi Sunting/Edit Draf Pembayaran:</strong> Pengguna dengan peran berwenang (Supervisor Keuangan atau Administrator) dapat menyunting data Rencana Pembayaran berstatus "Draft" sebelum disetujui Direktur. Sifatnya dinamis dan secara otomatis memuat seluruh draf data ke formulir input utama pelaku kustomisasi.</li>
                         <li><strong>Opsi Batalkan Persetujuan (Unapprove):</strong> Menambahkan tombol membatalkan persetujuan bagi Direktur Utama / Admin di Rencana Pembayaran berstatus Aktif asalkan piutang/invoice belum diterbitkan. Langkah ini mengembalikan status entri menjadi Draft kembali untuk siap dikoreksi/diedit ulang.</li>
                       </ul>
                     </div>
